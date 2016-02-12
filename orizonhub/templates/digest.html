@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+{% macro user(uid, nick) -%}
+<span class="user" data-uid="{{ uid }}">{{ nick|e }}</span>
+{%- endmacro %}
+{% macro msgwmeta(mid, text, uid=0, nick='', time='') -%}
+<span class="msgwrap" data-mid="{{ mid }}">
+<span class="mtext">{{ text|e }}</span>
+{% if uid %}<span class="meta">{{ user(uid, nick) }}, {{ time }}</span>
+{% endif %}
+</span>
+{%- endmacro %}
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ name }} 日报 - {{ date }}</title>
+<link rel="stylesheet" href="digest.css">
+</head>
+<body>
+<div id="container">
+<header>
+<h1 id="pagetitle">{{ name }} 日报<span class="info"> - {{ date }} {{ wday }}</span></h1>
+<div class="info">
+    <p>开始：{{ info.start }}，结束：{{ info.end }}；<wbr>
+    总计 {{ info.count }} 条，每分钟 {{ info.freq }} 条，人均 {{ info.avg }} 条</p>
+</div>
+</header>
+<div class="row rmd">
+<section id="flooder" class="col c6">
+    <h2>水王榜</h2>
+    <table id="fldrank">
+    <thead><tr><th>全名</th><th>消息</th><th>占比</th></tr></thead>
+    <tbody>
+    {% for u in info.flooder %}
+    <tr><td>{{ user(*u[0]) }}</td><td class="num">{{ u[1] }}</td>
+    <td><div class="bar" style="width: {{ u[2] }}">{{ u[2] }}</div></td></tr>
+    {% endfor %}
+    <tr>
+    <td>&lt;其他用户&gt;</td>
+    <td class="num">{{ info.others[0] }}</td>
+    <td><div class="bar" style="width: {{ info.others[1] }}">{{ info.others[1] }}</div></td>
+    </tr>
+    </tbody>
+    </table>
+</section>
+<section id="tags" class="col c6">
+    <h2>标签</h2>
+    <table id="tagrank">
+    <thead><tr><th>标签</th><th>数量</th></tr></thead>
+    <tbody>
+    {% for t in info.tags %}
+    <tr><td>{{ t[0]|e }}</td><td class="num" data-mid="{{ t[1]|join(',') }}">{{ t[1]|length }}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+</section>
+</div>
+<section id="topics">
+    <h2>今日热点</h2>
+    {% for chunk in hotchunk -%}
+    <div class="topic">
+    <p><strong>关键词：</strong><span class="keywords">{{ chunk[0]|join(', ')|e }}</span></p>
+    <ol>{% for msg in chunk[1] %}<li>{{ msgwmeta(*msg) }}</li>{% endfor %}
+    </ol>
+    </div>
+    {%- endfor %}
+</section>
+<section id="titlechange">
+    <h2>改名部</h2>
+    {% for item in titlechange -%}
+    {% if item is string %}{{ item }}
+    {% else %}{{ msgwmeta(*item) }}
+    {% endif %}
+    {%- endfor %}
+</section>
+<footer>
+<a href="index.html">存档</a> - 更新时间：{{ gentime }}
+</footer>
+</div>
+</body>
+</html>

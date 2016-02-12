@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ name }} 日报</title>
+<link rel="stylesheet" href="digest.css">
+</head>
+<body>
+<div id="container">
+<header>
+<h1 id="pagetitle">{{ name }} 日报</h1>
+</header>
+<section id="index">
+    <h2>存档</h2>
+    <ul>
+    {% for item in index %}
+    <li><a href="{{ item[0] }}">{{ item[1] }}</a></li>
+    {% endfor %}
+    </ul>
+</section>
+<section id="stat">
+    <h2><a href="stat.html">统计</a></h2>
+</section>
+<footer>
+更新时间：{{ gentime }}
+</footer>
+</div>
+</body>
+</html>
