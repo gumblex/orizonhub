@@ -57,32 +57,23 @@ CREATE TABLE IF NOT EXISTS messages (
 **REPLACE INTO**.
 
 ```sql
-CREATE TABLE IF NOT EXISTS identity (
+CREATE TABLE IF NOT EXISTS user (
 	id INTEGER PRIMARY KEY,
 	protocol TEXT NOT NULL,
 	pid INTEGER, -- protocol-specified id
 	username TEXT,
 	first_name TEXT,
-	last_name TEXT
-)
-CREATE TABLE IF NOT EXISTS user (
-	id INTEGER PRIMARY KEY,
-	username TEXT NOT NULL,
-	full_name TEXT
-)
-CREATE TABLE IF NOT EXISTS user_link (
-	uid INTEGER,
-	link INTEGER,
-	FOREIGN KEY(uid) REFERENCES user(id),
-	FOREIGN KEY(link) REFERENCES identity(id),
+	last_name TEXT,
+	alias TEXT UNIQUE
 )
 ```
 
 ## Message Path
 
+```
    v----------------------------------------.
 Telegram --post_async-\        /-Forwarder--+
 IRC      --post_async--->Bus-->--Logger--v  |
 HTTP     --post------+/   ^    \-Command processor
          <-return----'    |_________________/
-
+```
