@@ -38,7 +38,7 @@ Orizon Hub
 
 ```sql
 CREATE TABLE IF NOT EXISTS messages (
-	uid INTEGER PRIMARY KEY,
+	id INTEGER PRIMARY KEY,
 	protocol TEXT NOT NULL,
 	pid INTEGER, -- protocol-specified id
 	src INTEGER, -- sender id
@@ -47,22 +47,34 @@ CREATE TABLE IF NOT EXISTS messages (
 	time INTEGER,
 	fwd_src INTEGER,
 	fwd_date INTEGER,
-	reply_id INTEGER
+	reply_id INTEGER,
+	FOREIGN KEY(src) REFERENCES users(id)
 )
 ```
 
 ## Users
 
+**REPLACE INTO**.
+
 ```sql
-CREATE TABLE IF NOT EXISTS user (
-	uid INTEGER, -- unique user id
+CREATE TABLE IF NOT EXISTS identity (
+	id INTEGER PRIMARY KEY,
 	protocol TEXT NOT NULL,
 	pid INTEGER, -- protocol-specified id
-	username TEXT NOT NULL,
+	username TEXT,
 	first_name TEXT,
-	last_name TEXT,
-	preference INTEGER,
-	UNIQUE (protocol, username)
+	last_name TEXT
+)
+CREATE TABLE IF NOT EXISTS user (
+	id INTEGER PRIMARY KEY,
+	username TEXT NOT NULL,
+	full_name TEXT
+)
+CREATE TABLE IF NOT EXISTS user_link (
+	uid INTEGER,
+	link INTEGER,
+	FOREIGN KEY(uid) REFERENCES user(id),
+	FOREIGN KEY(link) REFERENCES identity(id),
 )
 ```
 

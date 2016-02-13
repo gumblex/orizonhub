@@ -33,10 +33,9 @@ forwarders = {}
 
 def register_protocols(d):
     for k, v in d.items():
-        
+        pass
 
-
-Command = collections.namedtuple('Command', ('func', 'usage', 'scope'))
+Command = collections.namedtuple('Command', ('func', 'usage', 'protocol'))
 
 def register_command(name, usage=None, protocol=None, enabled=True):
     def wrapper(func):
@@ -44,33 +43,6 @@ def register_command(name, usage=None, protocol=None, enabled=True):
             commands[name] = Command(func, usage or func.__doc__, protocol)
         return func
     return wrapper
-
-def _requires_unix_version(sysname, min_version):
-    """Decorator raising SkipTest if the OS is `sysname` and the version is less
-    than `min_version`.
-
-    For example, @_requires_unix_version('FreeBSD', (7, 2)) raises SkipTest if
-    the FreeBSD version is less than 7.2.
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kw):
-            if platform.system() == sysname:
-                version_txt = platform.release().split('-', 1)[0]
-                try:
-                    version = tuple(map(int, version_txt.split('.')))
-                except ValueError:
-                    pass
-                else:
-                    if version < min_version:
-                        min_version_txt = '.'.join(map(str, min_version))
-                        raise unittest.SkipTest(
-                            "%s version %s or higher required, not %s"
-                            % (sysname, min_version_txt, version_txt))
-            return func(*args, **kw)
-        wrapper.min_version = min_version
-        return wrapper
-    return decorator
 
 
 
