@@ -4,6 +4,7 @@
 import time
 import json
 import enum
+import queue
 import logging
 import threading
 import functools
@@ -13,59 +14,73 @@ import concurrent.futures
 import pytz
 
 from . import utils
-from .config import config
 
 __version__ = '2.0'
-
-config = utils.wrap_attrdict(config)
 
 logger = logging.getLogger('orizond')
 logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
 
-timezone = pytz.timezone(config.timezone)
-executor = concurrent.futures.ThreadPoolExecutor(20)
+Message = collections.namedtuple('Message', (
+    # Protocol in User use 'telegrambot' and 'telegramcli' because of
+    # incompatible 'media' format
+    'protocol', # Protocol name: str ('telegrambot', 'irc', ...)
+    'pid',      # Protocol-specified message id: int or None
+    'src',      # 'From' field: User
+    'text',     # Message text: str
+    'media',    # Extra information about media and service info: dict
+    'time',     # Message time or receive time: int (unix timestamp)
+    'fwd_src',  # Forwarded from (Telegram): User
+    'fwd_date', # Forwarded message time (Telegram): int (unix timestamp)
+    'reply_id'  # Reply message id: int (-> pid field)
+))
 
-# Global provider registry
-commands = collections.OrderedDict()
-protocols = {}
-loggers = {}
-forwarders = {}
+User = collections.namedtuple('User', (
+    'id',         # User id as in database: int
+    # Protocol in User use 'telegram' as general name
+    'protocol',   # Protocol name: str ('telegram', 'irc', ...)
+    'pid',        # Protocol-specified message id: int or None
+    'username',   # Protocol-specified username: str or None
+    'first_name', # Protocol-specified first name or full name: str or None
+    'last_name',  # Protocol-specified last name: str or None
+    'alias'       # Canonical name alias: str
+))
 
-def register_protocols(d):
-    for k, v in d.items():
-        pass
+class BotInstance:
+    def __init__(self, config):
+        self.config = utils.wrap_attrdict(config)
+        self.timezone = pytz.timezone(config.timezone)
+        self.executor = concurrent.futures.ThreadPoolExecutor(10)
 
-Command = collections.namedtuple('Command', ('func', 'usage', 'protocol'))
+        self.commands = collections.OrderedDict()
+        self.protocols = {}
+        self.loggers = {}
+        self.providers = collections.ChainMap(self.protocols, self.loggers)
 
-def register_command(name, usage=None, protocol=None, enabled=True):
-    def wrapper(func):
-        if enabled:
-            commands[name] = Command(func, usage or func.__doc__, protocol)
-        return func
-    return wrapper
+        self.msg_q = queue.Queue()
 
+    def start():
+        for k, v in d.items():
+            pass
 
+    def post(msg):
+        self.msg_q.put(msg)
 
+    def stream():
+        while 1:
+            m = self.msg_q.get()
+            if m is None:
+                return
+            yield m
+
+    def submit_task(self, func, *args, **kwargs):
+        return self.executor.submit(func, *args, **kwargs)
 
 class Protocol:
-    pass
+    def start_polling(self):
+        raise NotImplementedError
 
+    def send(self, text):
+        raise NotImplementedError
 
-
-
-
-def async_method(func):
-    @functools.wraps(func)
-    def wrapped(self, *args, **kwargs):
-        return self.host.executor.submit(self.func, *args, **kwargs)
-    return wrapped
-
-def noerr_func(func):
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except Exception:
-            logging.exception('Async function failed.')
-    return wrapped
-
+    def forward(self, msg):
+        raise NotImplementedError
