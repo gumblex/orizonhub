@@ -36,55 +36,20 @@ import traceback
 
 from threading import Thread
 
-try:
-    __version__ = __import__('pkg_resources').get_distribution('sqlitedict').version
-except:
-    __version__ = '?'
+__version__ = '1.4.1'
 
 major_version = sys.version_info[0]
-if major_version < 3:  # py <= 2.x
-    if sys.version_info[1] < 5:  # py <= 2.4
-        raise ImportError("sqlitedict requires python 2.5 or higher (python 3.3 or higher supported)")
+def reraise(tp, value, tb=None):
+    if value is None:
+        value = tp()
+    if value.__traceback__ is not tb:
+        raise value.with_traceback(tb)
+    raise value
 
-    # necessary to use exec()_ as this would be a SyntaxError in python3.
-    # this is an exact port of six.reraise():
-    def exec_(_code_, _globs_=None, _locs_=None):
-        """Execute code in a namespace."""
-        if _globs_ is None:
-            frame = sys._getframe(1)
-            _globs_ = frame.f_globals
-            if _locs_ is None:
-                _locs_ = frame.f_locals
-            del frame
-        elif _locs_ is None:
-            _locs_ = _globs_
-        exec("""exec _code_ in _globs_, _locs_""")
+from pickle import dumps, loads, HIGHEST_PROTOCOL as PICKLE_PROTOCOL
 
-    exec_("def reraise(tp, value, tb=None):\n"
-          "    raise tp, value, tb\n")
-else:
-    def reraise(tp, value, tb=None):
-        if value is None:
-            value = tp()
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-
-try:
-    from cPickle import dumps, loads, HIGHEST_PROTOCOL as PICKLE_PROTOCOL
-except ImportError:
-    from pickle import dumps, loads, HIGHEST_PROTOCOL as PICKLE_PROTOCOL
-
-# some Python 3 vs 2 imports
-try:
-    from collections import UserDict as DictClass
-except ImportError:
-    from UserDict import DictMixin as DictClass
-
-try:
-    from queue import Queue
-except ImportError:
-    from Queue import Queue
+from collections import UserDict as DictClass
+from queue import Queue
 
 
 logger = logging.getLogger(__name__)
@@ -206,13 +171,13 @@ class SqliteDict(DictClass):
             yield key, decode(value)
 
     def keys(self):
-        return self.iterkeys() if major_version > 2 else list(self.iterkeys())
+        return self.iterkeys()
 
     def values(self):
-        return self.itervalues() if major_version > 2 else list(self.itervalues())
+        return self.itervalues()
 
     def items(self):
-        return self.iteritems() if major_version > 2 else list(self.iteritems())
+        return self.iteritems()
 
     def __contains__(self, key):
         HAS_ITEM = 'SELECT 1 FROM %s WHERE key = ?' % self.tablename
@@ -317,10 +282,6 @@ class SqliteDict(DictClass):
         # like close(), but assume globals are gone by now (do not log!)
         self.close(do_log=False)
 
-# Adding extra methods for python 2 compatibility (at import time)
-if major_version == 2:
-    SqliteDict.__nonzero__ = SqliteDict.__bool__
-    del SqliteDict.__bool__  # not needed and confusing
 #endclass SqliteDict
 
 
@@ -332,14 +293,14 @@ class SqliteMultithread(Thread):
     in a separate thread (in the same order they arrived).
 
     """
-    def __init__(self, filename, autocommit, journal_mode):
+    def __init__(self, filename, autocommit=False, journal_mode="DELETE"):
         super(SqliteMultithread, self).__init__()
         self.filename = filename
         self.autocommit = autocommit
         self.journal_mode = journal_mode
         # use request queue of unlimited size
         self.reqs = Queue()
-        self.setDaemon(True)  # python2.5-compatible
+        self.daemon = True
         self.exception = None
         self.log = logging.getLogger('sqlitedict.SqliteMultithread')
         self.start()
