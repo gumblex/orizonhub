@@ -4,7 +4,8 @@
 config = {
     'debug': True,
     # status file
-    'status': 'orizon_state.json'
+    # filename or ':SQLite3:'
+    'status': ':SQLite3:',
     'canonical_bot_name': '欧瑞珍',
     'canonical_group_name': '##Orz',
     'timezone': 'Asia/Shanghai',
@@ -15,7 +16,7 @@ config = {
     'loggers': {
         'sqlite': 'chatlogv2.db',
         'text': 'chatlog.txt'
-    }
+    },
     'protocols': {
         'irc': {
             'server': 'chat.freenode.net',
@@ -24,7 +25,7 @@ config = {
             'nick': 'NotOrizon',
             'channel': '##Orz',
             # None or regex
-            'ignore': None
+            'ignore': None,
             # read only
             'proxies': [
                 # protocol, relay bot nick regex, regex: (nick) (message)
@@ -32,7 +33,7 @@ config = {
                 ('tox', '^OrzTox.*', r'[([^]]+)] (.+)$'),
                 ('irc2p', '^OrzI2P.*', r'[([^]]+)] (.+)$')
             ]
-        }
+        },
         'telegrambot': {
             'token': '123456789:AbCdEf_1234567890ABCDEFGHIJKLMNOPQR',
             # negative as in API response
@@ -53,11 +54,11 @@ config = {
                 ('skype', 'https://api.example.com/message/')
             ]
         }
-    }
+    },
     'forwarders': {
         'in': ['irc', 'telegram', 'http', 'skype'],
         'out': ['irc', 'telegram', 'http', 'skype']
-    }
+    },
     'services': {
         'mediapath': 'server/img',
         'mediaurl': 'https://app.example.com/img/'

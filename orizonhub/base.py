@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
-import json
-import enum
 import queue
 import logging
-import threading
-import functools
 import collections
 import concurrent.futures
 
@@ -16,9 +11,6 @@ import pytz
 from . import utils
 
 __version__ = '2.0'
-
-logger = logging.getLogger('orizond')
-logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
 
 Message = collections.namedtuple('Message', (
     # Protocol in User use 'telegrambot' and 'telegramcli' because of
@@ -48,6 +40,9 @@ User = collections.namedtuple('User', (
 class BotInstance:
     def __init__(self, config):
         self.config = utils.wrap_attrdict(config)
+        self.logger = logging.getLogger('orizond')
+        self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
+
         self.timezone = pytz.timezone(config.timezone)
         self.executor = concurrent.futures.ThreadPoolExecutor(10)
 
@@ -58,14 +53,14 @@ class BotInstance:
 
         self.msg_q = queue.Queue()
 
-    def start():
-        for k, v in d.items():
+    def start(self):
+        for k, v in self.config.loggers.items():
             pass
 
-    def post(msg):
+    def post(self, msg):
         self.msg_q.put(msg)
 
-    def stream():
+    def stream(self):
         while 1:
             m = self.msg_q.get()
             if m is None:
