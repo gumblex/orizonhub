@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import socket
+from . import tgcli
 from ..base import Protocol
 
-class RawSocketProtocol(Protocol):
+class TelegramCliProtocol(Protocol):
     pass

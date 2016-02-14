@@ -6,12 +6,13 @@ config = {
     # status file
     # filename or ':SQLite3:'
     'status': ':SQLite3:',
-    'canonical_bot_name': '欧瑞珍',
+    'canonical_bot_name': 'SomeBot',
     'canonical_group_name': '##Orz',
     'timezone': 'Asia/Shanghai',
     'secretkey': 'SECRET_KEY',
     'command_config': {
-        'autoclose': False
+        'autoclose': False,
+        'welcome': True
     },
     'loggers': {
         'sqlite': 'chatlogv2.db',
@@ -43,6 +44,7 @@ config = {
         'telegramcli': {
             # optional 'enabled' field for all protocols, default True
             'enabled': False,
+            'peername': 'channel#id1001023456',
             'bin': '../tg/bin/telegram-cli'
         },
         'socket': {

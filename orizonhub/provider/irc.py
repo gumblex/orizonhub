@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-def main(args):
-    return 0
+from ..base import Protocol
+from .libirc import IRCConnection
 
-if __name__ == '__main__':
-    import sys
-    sys.exit(main(sys.argv))
+class IRCProtocol(Protocol):
+    pass

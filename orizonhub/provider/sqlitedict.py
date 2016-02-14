@@ -310,6 +310,7 @@ class SqliteMultithread(Thread):
             conn = sqlite3.connect(self.filename, isolation_level=None, check_same_thread=False)
         else:
             conn = sqlite3.connect(self.filename, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
         conn.execute('PRAGMA journal_mode = %s' % self.journal_mode)
         conn.text_factory = str
         cursor = conn.cursor()
@@ -317,7 +318,7 @@ class SqliteMultithread(Thread):
 
         res = None
         while True:
-            req, arg, res, outer_stack = self.reqs.get()
+            req, arg, res, info, outer_stack = self.reqs.get()
             if req == '--close--':
                 assert res, ('--close-- without return queue', res)
                 break
@@ -360,6 +361,9 @@ class SqliteMultithread(Thread):
                         res.put(rec)
                     res.put('--no more--')
 
+                if info:
+                    info.put((cursor.rowcount, cursor.lastrowid, cursor.description))
+
                 if self.autocommit:
                     conn.commit()
 
@@ -395,7 +399,7 @@ class SqliteMultithread(Thread):
             # occurred.
             reraise(e_type, e_value, e_tb)
 
-    def execute(self, req, arg=None, res=None):
+    def execute(self, req, arg=None, res=None, info=None):
         """
         `execute` calls are non-blocking: just queue up the request and return immediately.
         """
@@ -406,7 +410,7 @@ class SqliteMultithread(Thread):
         # jython take a severe performance impact for throwing exceptions
         # so often.
         stack = traceback.extract_stack()[:-1]
-        self.reqs.put((req, arg or tuple(), res, stack))
+        self.reqs.put((req, arg or tuple(), res, info, stack))
 
     def executemany(self, req, items):
         for item in items:
@@ -436,6 +440,11 @@ class SqliteMultithread(Thread):
             return next(iter(self.select(req, arg)))
         except StopIteration:
             return None
+
+    def change_one(self, req, arg=None):
+        info = Queue()
+        self.execute(req, arg, info=info)
+        return info.get()
 
     def commit(self, blocking=True):
         if blocking:

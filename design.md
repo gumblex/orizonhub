@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS user (
 	username TEXT,
 	first_name TEXT,
 	last_name TEXT,
-	alias TEXT UNIQUE
+	alias TEXT
 )
 ```
 

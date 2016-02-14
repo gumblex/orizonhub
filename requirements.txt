@@ -1,4 +1,5 @@
 requests
 pytz
 jieba
-Jinja2
+werkzeug
+jinja2

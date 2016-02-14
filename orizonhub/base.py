@@ -26,16 +26,23 @@ Message = collections.namedtuple('Message', (
     'reply_id'  # Reply message id: int (-> pid field)
 ))
 
-User = collections.namedtuple('User', (
-    'id',         # User id as in database: int
-    # Protocol in User use 'telegram' as general name
-    'protocol',   # Protocol name: str ('telegram', 'irc', ...)
-    'pid',        # Protocol-specified message id: int or None
-    'username',   # Protocol-specified username: str or None
-    'first_name', # Protocol-specified first name or full name: str or None
-    'last_name',  # Protocol-specified last name: str or None
-    'alias'       # Canonical name alias: str
-))
+class User(collections.namedtuple('User', (
+        'id',         # User id as in database: int or None (unknown)
+        # Protocol in User use 'telegram' as general name
+        'protocol',   # Protocol name: str ('telegram', 'irc', ...)
+        'pid',        # Protocol-specified message id: int or None
+        'username',   # Protocol-specified username: str or None
+        'first_name', # Protocol-specified first name or full name: str or None
+        'last_name',  # Protocol-specified last name: str or None
+        'alias'       # Canonical name alias: str
+    ))):
+    UnameKey = collections.namedtuple('UnameKey', ('protocol', 'username'))
+    PidKey = collections.namedtuple('PidKey', ('protocol', 'pid'))
+    def _key(self):
+        if u.pid is None:
+            return self.UnameKey(u.protocol, u.username)
+        else:
+            return self.PidKey(u.protocol, u.pid)
 
 class BotInstance:
     def __init__(self, config):

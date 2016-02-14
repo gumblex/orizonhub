@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import socket
+import requests
+
 from ..base import Protocol
 
-class RawSocketProtocol(Protocol):
+class TelegramBotProtocol(Protocol):
     pass
