@@ -23,13 +23,14 @@ config = {
             'server': 'chat.freenode.net',
             'port': 6697,
             'ssl': True,
-            'nick': 'NotOrizon',
+            'username': 'NotOrizon',
             'channel': '##Orz',
             # None or regex
             'ignore': None,
             # read only
             'proxies': [
                 # protocol, relay bot nick regex, regex: (nick) (message)
+                # other messages sent by this user are considered service message
                 ('xmpp', '^OrzGTalk.*', r'\(GTalk\) (\w+): (.+)$'),
                 ('tox', '^OrzTox.*', r'[([^]]+)] (.+)$'),
                 ('irc2p', '^OrzI2P.*', r'[([^]]+)] (.+)$')
@@ -40,6 +41,7 @@ config = {
             # negative as in API response
             'groupid': -1001001023456,
             'servemedia': 'self',
+            'username': 'notorzdigbot'
         },
         'telegramcli': {
             # optional 'enabled' field for all protocols, default True

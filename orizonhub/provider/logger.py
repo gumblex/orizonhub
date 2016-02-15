@@ -81,7 +81,7 @@ class SQLiteLogger(Logger):
 
     def log(self, msg):
         src = self.update_user(msg.src)
-        self.conn.execute('INSERT INTO messages (protocol, pid, src, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)' % (msg.protocol, msg.pid, src, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, msg.fwd_src, msg.fwd_date, msg.reply_id))
+        self.conn.execute('INSERT INTO messages (protocol, pid, src, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)' % (msg.protocol, msg.pid, src, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, msg.fwd_src, msg.fwd_date, msg.reply.pid if msg.reply else None))
 
     def update_user(self, user):
         '''

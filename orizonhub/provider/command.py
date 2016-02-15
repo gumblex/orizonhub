@@ -6,12 +6,22 @@ import math
 import random
 import collections
 
+PREFIX = "/'"
+
+Command = collections.namedtuple('Command',
+                                 ('func', 'usage', 'protocol', 'dependency'))
+RA = RichAnswer = collections.namedtuple('RichAnswer', ('text', 'd'))
+
+general_handlers = collections.OrderedDict()
+commands = collections.OrderedDict()
 bot = None
 
-Command = collections.namedtuple('Command', ('func', 'usage', 'protocol', 'dependency'))
-commands = collections.OrderedDict()
-
-PREFIX = "/'"
+def register_handler(name, usage=None, protocol=None, dependency=None, enabled=True):
+    def wrapper(func):
+        if enabled:
+            general_handlers[name] = Command(func, usage or func.__doc__, protocol, dependency)
+        return func
+    return wrapper
 
 def register_command(name, usage=None, protocol=None, dependency=None, enabled=True):
     def wrapper(func):
@@ -20,31 +30,40 @@ def register_command(name, usage=None, protocol=None, dependency=None, enabled=T
         return func
     return wrapper
 
+
+############################################################
+# General Handlers
+# aka. Blackgun Handler
+
+@register_handler('autoclose')
+def ghd_autoclose(msg):
+    ...
+
+@register_handler('blackgun')
+def ghd_blackgun(msg):
+    ...
+
+@register_handler('welcome', protocol=('telegrambot',))
+def ghd_welcome(msg):
+    ...
+
+############################################################
+# Commands
+
+# Helper functions
+
 srandom = random.SystemRandom()
 facescore = lambda x,y: 1/2*math.erfc((0.5*y-x)/(2**0.5*(0.5*y**0.5)))*100
+facescore.__doc__ = (
+    'Calculate the "White Face Index" '
+    'using the number of white faces generated.'
+)
 fstable = [facescore(i, 100) for i in range(101)]
 revface = lambda x: min((abs(x-v), k) for k,v in enumerate(fstable))[1]
-
-def onmsg(self, msg):
-    text = msg.get('text')
-    if not text:
-        return NotImplemented
-    spl = text.split(' ', 1)
-    cmd = spl[0]
-    if msg['text'][0] in self.prefix:
-        fn = self.cmds.get(cmd[1:])
-        if fn:
-            return fn(msg, spl[1] if len(spl) > 1 else '')
-        else:
-            return NotImplemented
-    else:
-        fn = self.cmds.get('')
-        if fn:
-            return fn(msg, text)
-        else:
-            return NotImplemented
-
-# Commands
+revface.__doc__ = (
+    'Calculate the number of white faces required '
+    'for a given "White Face Index".'
+)
 
 @register_command('m', dependency='sqlite')
 def cmd_getmsg(self, msg, expr):
