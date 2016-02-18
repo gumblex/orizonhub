@@ -67,5 +67,6 @@ target/
 
 ###
 # bot data
+config.py
 *.db
 *.json
