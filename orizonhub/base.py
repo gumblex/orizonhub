@@ -3,64 +3,73 @@
 
 import queue
 import logging
+import threading
 import collections
 import concurrent.futures
 
-from . import utils
+from . import utils, provider
+from .model import User
+from .consumer import MessageHandler
+
+import pytz
 
 __version__ = '2.0'
 
-Message = collections.namedtuple('Message', (
-    # Protocol in User use 'telegrambot' and 'telegramcli' because of
-    # incompatible 'media' format
-    'protocol', # Protocol name: str ('telegrambot', 'irc', ...)
-    'pid',      # Protocol-specified message id: int or None
-    'src',      # 'From' field: User
-    'text',     # Message text: str or None
-    'media',    # Extra information about media and service info: dict or None
-    'time',     # Message time or receive time: int (unix timestamp)
-    'fwd_src',  # Forwarded from (Telegram): User or None
-    'fwd_date', # Forwarded message time (Telegram): int (unix timestamp) or None
-    'reply'     # Reply message id: Message or None
-))
-
-Request = collections.namedtuple('Request', ('cmd', 'args', 'kwargs'))
-
-class User(collections.namedtuple('User', (
-        'id',         # User id as in database: int or None (unknown)
-        # Protocol in User use 'telegram' as general name
-        'protocol',   # Protocol name: str ('telegram', 'irc', ...)
-        'pid',        # Protocol-specified message id: int or None
-        'username',   # Protocol-specified username: str or None
-        'first_name', # Protocol-specified first name or full name: str or None
-        'last_name',  # Protocol-specified last name: str or None
-        'alias'       # Canonical name alias: str
-    ))):
-    UnameKey = collections.namedtuple('UnameKey', ('protocol', 'username'))
-    PidKey = collections.namedtuple('PidKey', ('protocol', 'pid'))
-    def _key(self):
-        if self.pid is None:
-            return self.UnameKey(self.protocol, self.username)
-        else:
-            return self.PidKey(self.protocol, self.pid)
-
 class BotInstance:
     def __init__(self, config):
-        self.config = utils.wrap_attrdict(config)
+        self.config = config = utils.wrap_attrdict(config)
         self.logger = logging.getLogger('orizond')
         self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.executor = concurrent.futures.ThreadPoolExecutor(10)
+        self.timezone = pytz.timezone(config.timezone)
+        self.identity = User(0, 'bot', 0, config.bot_nickname, config.bot_fullname, None, config.bot_nickname)
 
         self.commands = collections.OrderedDict()
         self.protocols = {}
         self.loggers = {}
         self.providers = collections.ChainMap(self.protocols, self.loggers)
+        self.threads = []
+        self.state = {}
 
-        self.bus = MessageBus()
+        self.bus = MessageBus(MessageHandler(config, self.protocols))
+        self.logger.info('Bot instance initialized.')
 
     def start(self):
         for k, v in self.config.loggers.items():
-            pass
+            try:
+                self.loggers[k] = provider.loggers[k](v, self.timezone)
+                self.logger.info('Registered logger: ' + k)
+            except KeyError:
+                raise ValueError('unrecognized logger: ' + k)
+        if self.config.status == ':SQLite3:':
+            self.state = provider.SQLiteStateStore(self.loggers['sqlite'].conn)
+        else:
+            self.state = provider.BasicStateStore(self.config.status)
+        for k, v in self.config.protocols.items():
+            try:
+                if v.get('enabled', True):
+                    p = self.protocols[k] = provider.protocols[k](v, self.identity, self.bus)
+                    t = threading.Thread(target=p.start_polling, name=k)
+                    t.daemon = True
+                    t.start()
+                    self.logger.info('Started protocol: ' + k)
+                    self.threads.append(t)
+            except KeyError:
+                raise ValueError('unrecognized logger: ' + v)
+        self.logger.info('Satellite launched.')
+        for t in self.threads:
+            try:
+                t.join()
+            except KeyboardInterrupt:
+                self.logger.warning('Thread "%s" died with ^C.' % t.name)
+
+    def exit(self):
+        for v in self.protocols.values():
+            v.exit()
+        self.state.close()
+        for v in self.loggers.values():
+            v.close()
+        self.logger.info('Exited cleanly.')
 
     def submit_task(self, func, *args, **kwargs):
         return self.executor.submit(func, *args, **kwargs)
@@ -82,13 +91,3 @@ class MessageBus:
             if m is None:
                 return
             yield m
-
-class Protocol:
-    def start_polling(self):
-        raise NotImplementedError
-
-    def send(self, text):
-        raise NotImplementedError
-
-    def forward(self, msg):
-        raise NotImplementedError

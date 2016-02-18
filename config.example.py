@@ -6,8 +6,10 @@ config = {
     # status file
     # filename or ':SQLite3:'
     'status': ':SQLite3:',
-    'canonical_bot_name': 'SomeBot',
-    'canonical_group_name': '##Orz',
+    'bot_fullname': 'Mr. Some Bot',
+    # should be \w+
+    'bot_nickname': 'SomeBot',
+    'group_name': '##Orz',
     'timezone': 'Asia/Shanghai',
     'secretkey': 'SECRET_KEY',
     'command_config': {
@@ -51,7 +53,7 @@ config = {
         },
         'socket': {
             'enabled': False,
-            'socketfile': '/tmp/orizon_http.sock',
+            'address': '/tmp/orizon_http.sock',
             # read/write
             'proxies': [
                 ('http', 'https://web.example.com/'),

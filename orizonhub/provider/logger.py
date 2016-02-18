@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
 import time
 import json
 import logging
@@ -9,18 +10,8 @@ import collections
 from datetime import datetime
 from logging.handlers import WatchedFileHandler
 
-from ..base import User
+from ..model import User, Logger
 from .sqlitedict import SqliteMultithread
-
-class Logger:
-    def log(self, msg):
-        pass
-
-    def commit(self):
-        pass
-
-    def close(self):
-        pass
 
 class TextLogger(Logger):
     '''Logs messages with plain text. Rotating-friendly.'''
@@ -66,10 +57,10 @@ class SQLiteLogger(Logger):
             'first_name TEXT,'
             'last_name TEXT,'
             'alias TEXT NOT NULL'
-        ')'
+        ')',
     )
 
-    def __init__(self, filename):
+    def __init__(self, filename, tz):
         self.conn = SqliteMultithread(filename)
         for c in self.SCHEMA:
             self.conn.execute(c)
@@ -155,7 +146,7 @@ class SQLiteStateStore(BasicStateStore):
         self.conn.execute('CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT)')
         self.conn.commit()
         data = dict(self.conn.select('SELECT key, value FROM state'))
-        super().__init__(data)
+        super(BasicStateStore, self).__init__(data)
 
     def commit(self):
         for k, v in self.data:

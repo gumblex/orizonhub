@@ -3,7 +3,7 @@
 
 import requests
 
-from ..base import Protocol
+from ..model import Protocol
 
 class TelegramBotProtocol(Protocol):
     pass

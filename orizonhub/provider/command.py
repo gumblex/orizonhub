@@ -6,11 +6,9 @@ import math
 import random
 import collections
 
-PREFIX = "/'"
+from ..model import Command, Response as R
 
-Command = collections.namedtuple('Command',
-                                 ('func', 'usage', 'protocol', 'dependency'))
-RA = RichAnswer = collections.namedtuple('RichAnswer', ('text', 'd'))
+PREFIX = "/'"
 
 general_handlers = collections.OrderedDict()
 commands = collections.OrderedDict()

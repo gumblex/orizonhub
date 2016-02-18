@@ -7,6 +7,11 @@ import collections
 signames = {k: v for v, k in reversed(sorted(signal.__dict__.items()))
      if v.startswith('SIG') and not v.startswith('SIG_')}
 
+def nt_from_dict(nt, d, default=None):
+    kwargs = dict.fromkeys(nt._fields, default)
+    kwargs.update(d)
+    return nt(**kwargs)
+
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)

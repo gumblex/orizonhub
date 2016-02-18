@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from . import tgcli
-from ..base import Protocol
+from ..model import Protocol
 
 class TelegramCliProtocol(Protocol):
     pass
