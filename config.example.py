@@ -20,6 +20,8 @@ config = {
         'sqlite': 'chatlogv2.db',
         'text': 'chatlog.txt'
     },
+    # for logging bot messages
+    'main_protocol': 'telegrambot',
     'protocols': {
         'irc': {
             'server': 'chat.freenode.net',
@@ -61,10 +63,7 @@ config = {
             ]
         }
     },
-    'forwarders': {
-        'in': ['irc', 'telegram', 'http', 'skype'],
-        'out': ['irc', 'telegram', 'http', 'skype']
-    },
+    'forward': ['irc', 'telegram', 'http', 'skype'],
     'services': {
         'mediapath': 'server/img',
         'mediaurl': 'https://app.example.com/img/'

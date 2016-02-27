@@ -71,6 +71,7 @@ class SQLiteLogger(Logger):
             self.user_cache[u._key()] = u
 
     def log(self, msg):
+        assert msg.mtype == 'group'
         src = self.update_user(msg.src)
         self.conn.execute('INSERT INTO messages (protocol, pid, src, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)' % (msg.protocol, msg.pid, src, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, msg.fwd_src, msg.fwd_date, msg.reply.pid if msg.reply else None))
 

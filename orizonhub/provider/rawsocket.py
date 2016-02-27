@@ -19,9 +19,8 @@ class RawSocketProtocol(Protocol):
     ==> {"type": "response", "response": <Response>}
     '''
 
-    def __init__(self, config, identity, bus):
+    def __init__(self, config, bus):
         self.config = config
-        self.identity = identity
         self.bus = bus
         self.handlers = []
         if type(config.address) == tuple:
@@ -36,7 +35,7 @@ class RawSocketProtocol(Protocol):
         for h in self.handlers:
             h.send(response)
 
-    def forward(self, msg):
+    def forward(self, msg, protocol):
         for h in self.handlers:
             h.send(msg)
 
@@ -55,12 +54,16 @@ def _request_handler(registry, bus):
         def handle(self):
             self.conn = Connection(self.request.detach())
             while self.conn._handle:
-                obj = json.loads(self.conn.recv_bytes().decode('utf-8'))
+                try:
+                    obj = json.loads(self.conn.recv_bytes().decode('utf-8'))
+                except EOFError:
+                    break
                 if obj.get('async', True):
                     bus.post(nt_from_dict(Message, obj['message'], None))
+                    self.conn.send_bytes(json.dumps(True).encode('utf-8'))
                 else:
                     m = bus.post_sync(nt_from_dict(Message, obj['message'], None))
-                    ret = {"type": "response", "response": m._asdict()}
+                    ret = {"type": "response", "response": m._asdict() if m else None}
                     self.conn.send_bytes(json.dumps(ret).encode('utf-8'))
 
         def send(self, msg):
@@ -72,4 +75,5 @@ def _request_handler(registry, bus):
 
         def finish(self):
             registry.remove(self)
+
     return RawSocketHandler

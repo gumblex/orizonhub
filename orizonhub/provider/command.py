@@ -64,7 +64,7 @@ revface.__doc__ = (
 )
 
 @register_command('m', dependency='sqlite')
-def cmd_getmsg(self, msg, expr):
+def cmd_getmsg(expr, msg=None):
     '''/m <message_id> [...] Get specified message(s) by ID(s).'''
     try:
         if not expr:
@@ -79,10 +79,10 @@ def cmd_getmsg(self, msg, expr):
     if msg['protocal'] == 'tgbot':
         self.host.tgbot.forwardmulti(mids, msg['chat']['id'], msg['message_id'])
     else:
-        self. forwardmulti(mids, chatid, replyid)
+        self.forwardmulti(mids, chatid, replyid)
 
 @register_command('context', dependency='sqlite')
-def cmd_context(self, msg, expr):
+def cmd_context(expr, msg=None):
     '''/context <message_id> [number=2] Show the specified message and its context. max=10'''
     expr = expr.split(' ')
     try:
@@ -98,7 +98,7 @@ def cmd_context(self, msg, expr):
     forwardmulti_t(range(mid - limit, mid + limit + 1), chatid, replyid)
 
 @register_command('quote', dependency='sqlite')
-def cmd_quote(self, msg, expr):
+def cmd_quote(expr, msg=None):
     '''/quote Send a today's random message.'''
     typing(chatid)
     sec = daystart()
@@ -124,7 +124,7 @@ def ellipsisresult(s, find, maxctx=50):
 re_search_number = re.compile(r'([0-9]+)(,[0-9]+)?')
 
 @register_command('search', dependency='sqlite')
-def cmd_search(self, msg, expr):
+def cmd_search(expr, msg=None):
     '''/search|/s [@username] [keyword] [number=5|number,offset] Search the group log for recent messages. max(number)=20'''
     username, uid, limit, offset = None, None, 5, 0
     if expr:
@@ -162,7 +162,7 @@ def cmd_search(self, msg, expr):
     return '\n'.join(result) or 'Found nothing.'
 
 @register_command('mention', protocol=('telegrambot',), dependency='sqlite')
-def cmd_mention(self, msg, expr):
+def cmd_mention(expr, msg=None):
     '''/mention Show last mention of you.'''
     if msg['chat']['id'] != -CFG['groupid']:
         return "This command can't be used in this chat."
@@ -191,7 +191,7 @@ def timestring(minutes):
     return (' %d 天' % d if d else '') + (' %d 小时' % h if h else '') + (' %d 分钟' % m if m else '')
 
 @register_command('user', dependency='sqlite')
-def cmd_uinfo(self, msg, expr):
+def cmd_uinfo(expr, msg=None):
     '''/user [@username] [minutes=1440] Show information about <@username>.'''
     tinput = ''
     if 'reply_to_message' in msg:
@@ -241,7 +241,7 @@ def cmd_uinfo(self, msg, expr):
     return '\n'.join(result)
 
 @register_command('stat', dependency='sqlite')
-def cmd_stat(self, msg, expr):
+def cmd_stat(expr, msg=None):
     '''/stat [minutes=1440] Show statistics.'''
     try:
         minutes = min(max(int(expr), 1), 3359733)
@@ -261,11 +261,11 @@ def cmd_stat(self, msg, expr):
     return '\n'.join(msg)
 
 @register_command('digest', enabled=False)
-def cmd_digest(self, msg, expr):
+def cmd_digest(expr, msg=None):
     return 'Not implemented.'
 
 @register_command('calc')
-def cmd_calc(self, msg, expr):
+def cmd_calc(expr, msg=None):
     '''/calc <expr> Calculate <expr>.'''
     # Too many bugs
     if expr:
@@ -274,7 +274,7 @@ def cmd_calc(self, msg, expr):
         return 'Syntax error. Usage: ' + cmd_calc.__doc__
 
 @register_command('py', enabled=False)
-def cmd_py(self, msg, expr):
+def cmd_py(expr, msg=None):
     '''/py <expr> Evaluate Python 2 expression <expr>.'''
     if expr:
         if len(expr) > 1000:
@@ -285,12 +285,12 @@ def cmd_py(self, msg, expr):
         return 'Syntax error. Usage: ' + cmd_py.__doc__
 
 @register_command('name')
-def cmd_name(self, msg, expr):
+def cmd_name(expr, msg=None):
     '''/name [pinyin] Get a Chinese name.'''
     runapptask('name', (expr,), (chatid, replyid))
 
 @register_command('cc')
-def cmd_cc(self, msg, expr):
+def cmd_cc(expr, msg=None):
     '''/cc <Chinese> Simplified-Traditional Chinese conversion.'''
     tinput = ''
     if 'reply_to_message' in msg:
@@ -299,7 +299,7 @@ def cmd_cc(self, msg, expr):
     runapptask('cc', (tinput,), (chatid, replyid))
 
 @register_command('ime')
-def cmd_ime(self, msg, expr):
+def cmd_ime(expr, msg=None):
     '''/ime [pinyin] Simple Pinyin IME.'''
     tinput = ''
     if 'reply_to_message' in msg:
@@ -313,7 +313,7 @@ def cmd_ime(self, msg, expr):
     runapptask('ime', (tinput,), (chatid, replyid))
 
 @register_command('cut')
-def cmd_cut(self, msg, expr):
+def cmd_cut(expr, msg=None):
     '''/cut [c|m] <something> Segment <something>.'''
     if expr[:2].strip() == 'c':
         lang = 'c'
@@ -335,7 +335,7 @@ def cmd_cut(self, msg, expr):
     runapptask('cut', (tinput, lang), (chatid, replyid))
 
 @register_command('wyw')
-def cmd_wyw(self, msg, expr):
+def cmd_wyw(expr, msg=None):
     '''/wyw [c|m] <something> Translate something to or from classical Chinese.'''
     if expr[:2].strip() == 'c':
         lang = 'c2m'
@@ -358,7 +358,7 @@ def cmd_wyw(self, msg, expr):
     runapptask('wyw', (tinput, lang), (chatid, replyid))
 
 @register_command('say')
-def cmd_say(self, msg, expr):
+def cmd_say(expr, msg=None):
     '''/say Say something interesting.'''
     #typing(chatid)
     if expr:
@@ -367,7 +367,7 @@ def cmd_say(self, msg, expr):
         runapptask('say', (), (chatid, replyid))
 
 @register_command('reply')
-def cmd_reply(self, msg, expr):
+def cmd_reply(expr, msg=None):
     '''/reply [question] Reply to the conversation.'''
     if 'forward_from' in msg and msg['chat']['id'] < 0:
         return
@@ -379,7 +379,7 @@ def cmd_reply(self, msg, expr):
     runapptask('reply', (text,), (chatid, replyid))
 
 @register_command('do')
-def cmd_do(self, msg, expr):
+def cmd_do(expr, msg=None):
     actions = collections.OrderedDict((
         ('shrug', '¯\\_(ツ)_/¯'),
         ('lenny', '( ͡° ͜ʖ ͡°)'),
@@ -417,7 +417,7 @@ def cmd_do(self, msg, expr):
             return 'Something happened.'
 
 #@register_command('t2i')
-#def cmd_t2i(self, msg, expr):
+#def cmd_t2i(expr, msg=None):
     #global CFG
     #if msg['chat']['id'] == -CFG['groupid']:
         #if expr == 'off' or CFG.get('t2i'):
@@ -428,7 +428,7 @@ def cmd_do(self, msg, expr):
             #return 'Telegram to IRC forwarding enabled.'
 
 #@register_command('i2t')
-#def cmd_i2t(self, msg, expr):
+#def cmd_i2t(expr, msg=None):
     #global CFG
     #if msg['chat']['id'] == -CFG['groupid']:
         #if expr == 'off' or CFG.get('i2t'):
@@ -439,7 +439,7 @@ def cmd_do(self, msg, expr):
             #return 'IRC to Telegram forwarding enabled.'
 
 @register_command('autoclose')
-def cmd_autoclose(self, msg, expr):
+def cmd_autoclose(expr, msg=None):
     global CFG
     if msg['chat']['id'] == -CFG['groupid']:
         if CFG.get('autoclose'):
@@ -450,7 +450,7 @@ def cmd_autoclose(self, msg, expr):
             return 'Auto closing brackets enabled.'
 
 @register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
-def cmd__cmd(self, msg, expr):
+def cmd__cmd(expr, msg=None):
     global SAY_P, APP_P
     if chatid < 0:
         return
@@ -475,7 +475,7 @@ def cmd__cmd(self, msg, expr):
         #return 'ping'
 
 @register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
-def cmd__welcome(self, msg, expr):
+def cmd__welcome(expr, msg=None):
     if chatid > 0:
         return
     usr = msg["new_chat_participant"]
@@ -488,7 +488,7 @@ fstable = [facescore(i, 100) for i in range(101)]
 revface = lambda x: min((abs(x-v), k) for k,v in enumerate(fstable))[1]
 
 @register_command('233')
-def cmd_233(self, msg, expr):
+def cmd_233(expr, msg=None):
     try:
         num = max(min(int(expr), 100), 1)
     except Exception:
@@ -507,7 +507,7 @@ def cmd_233(self, msg, expr):
     return txt
 
 @register_command('fig')
-def cmd_fig(self, msg, expr):
+def cmd_fig(expr, msg=None):
     '''/fig <char> Make figure out of moon faces.'''
     if expr:
         runapptask('fig', (expr,), (chatid, replyid))
@@ -515,22 +515,22 @@ def cmd_fig(self, msg, expr):
         return srandom.choice('🌝🌚')
 
 @register_command('start', protocol=('telegrambot',))
-def cmd_start(self, msg, expr):
+def cmd_start(expr, msg=None):
     if chatid != -CFG['groupid']:
         return 'This is Orz Digger. It can help you search the long and boring chat log of the ##Orz group.\nSend me /help for help.'
 
 @register_command('cancel', protocol=('telegrambot',))
-def cmd_cancel(self, msg, expr):
+def cmd_cancel(expr, msg=None):
     if msg['protocal'] != 'tgbot':
         return NotImplemented
     bot_api('sendMessage', chat_id=msg['chat']['id'], text='Cancelled.', reply_to_message_id=msg['message_id'], reply_markup='{"hide_keyboard": true}')
 
 @register_command('hello', enabled=False)
-def cmd_hello(self, msg, expr):
+def cmd_hello(expr, msg=None):
     return 'Hello!'
 
 @register_command('help')
-def cmd_help(self, msg, expr):
+def cmd_help(expr, msg=None):
     if msg['protocal'] != 'tgbot':
         return NotImplemented
     if expr:
