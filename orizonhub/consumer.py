@@ -2,17 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import shlex
+import logging
 import collections
 import concurrent.futures
 
 import pytz
 
-from . import base
 from .model import Message, Request, Response
 from .provider import command
 
+logger = logging.getLogger('msghandler')
+
 class MessageHandler:
     def __init__(self, config, protocols, loggers):
+        logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
         self.protocols = protocols
         self.loggers = loggers
@@ -23,7 +26,7 @@ class MessageHandler:
                           if 'username' in p]
 
     def __call__(self, msg):
-        base.logger.debug(msg)
+        logger.debug(msg)
         if isinstance(msg, Request):
             return self.dispatch(msg)
         else:
@@ -35,7 +38,7 @@ class MessageHandler:
                         self.executor.submit(self.protocols[n].forward, (msg, n))
             req = self.parse_cmd(msg.text) if msg.text else None
             if req:
-                base.logger.debug('parsed request: %s', req)
+                logger.debug('parsed request: %s', req)
                 return self.dispatch(req, msg)
             else:
                 return self.dispatch_gh(msg)
@@ -68,7 +71,7 @@ class MessageHandler:
 
     def dispatch(self, req, msg=None):
         c = command.commands.get(req.cmd)
-        base.logger.debug('command: %s', c)
+        logger.debug('command: %s', c)
         if not (c is None
                 or msg is None and c.protocol
                 or c.protocol and msg.protocol not in c.protocol
@@ -76,7 +79,7 @@ class MessageHandler:
             if msg:
                 req.kwargs['msg'] = msg
             r = c.func(req.expr, **req.kwargs)
-            base.logger.debug('response: %s', r)
+            logger.debug('response: %s', r)
             if r:
                 if not isinstance(r, Response):
                     r = Response(r, None, msg)

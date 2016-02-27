@@ -28,6 +28,7 @@ config = {
             'port': 6697,
             'ssl': True,
             'username': 'NotOrizon',
+            # 'password': 'something',
             'channel': '##Orz',
             # None or regex
             'ignore': None,

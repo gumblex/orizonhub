@@ -23,10 +23,12 @@ class RawSocketProtocol(Protocol):
         self.config = config
         self.bus = bus
         self.handlers = []
-        if type(config.address) == tuple:
-            self.sockserv = socketserver.TCPServer(config.address, _request_handler(self.handlers, bus))
-        elif type(config.address) is str:
-            self.sockserv = socketserver.UnixStreamServer(config.address, _request_handler(self.handlers, bus))
+        self.sockhdl = _request_handler(self.handlers, bus)
+        address = config.protocols.socket.address
+        if type(address) == tuple:
+            self.sockserv = socketserver.TCPServer(address, self.sockhdl)
+        elif type(address) is str:
+            self.sockserv = socketserver.UnixStreamServer(address, self.sockhdl)
 
     def start_polling(self):
         self.sockserv.serve_forever()
@@ -40,11 +42,15 @@ class RawSocketProtocol(Protocol):
             h.send(msg)
 
     def exit(self):
-        self.sockserv.shutdown()
         try:
-            os.unlink(self.config.address)
-        except Exception:
-            pass
+            for h in self.handlers:
+                h.close()
+            self.sockserv.shutdown()
+        finally:
+            try:
+                os.unlink(self.config.protocols.socket.address)
+            except Exception:
+                pass
 
 def _request_handler(registry, bus):
     class RawSocketHandler(socketserver.BaseRequestHandler):
@@ -75,5 +81,8 @@ def _request_handler(registry, bus):
 
         def finish(self):
             registry.remove(self)
+
+        def close(self):
+            self.conn.close()
 
     return RawSocketHandler

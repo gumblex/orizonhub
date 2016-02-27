@@ -25,6 +25,7 @@ def wrap_attrdict(obj):
     elif isinstance(obj, list):
         for k, v in enumerate(obj):
             obj[k] = wrap_attrdict(v)
+        return obj
     else:
         return obj
 

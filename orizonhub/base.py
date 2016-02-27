@@ -14,12 +14,9 @@ import pytz
 
 __version__ = '2.0'
 
-logger = logging.getLogger('orizond')
-
 class BotInstance:
     def __init__(self, config):
         self.config = config = utils.wrap_attrdict(config)
-        logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.timezone = pytz.timezone(config.timezone)
 
         self.commands = collections.OrderedDict()
@@ -29,15 +26,15 @@ class BotInstance:
         self.state = {}
 
         self.bus = MessageBus(MessageHandler(config, self.protocols, self.loggers))
-        logger.info('Bot instance initialized.')
+        logging.info('Bot instance initialized.')
 
     def start(self):
         for k, v in self.config.loggers.items():
             try:
                 self.loggers[k] = provider.loggers[k](v, self.timezone)
-                logger.info('Registered logger: ' + k)
+                logging.info('Registered logging: ' + k)
             except KeyError:
-                raise ValueError('unrecognized logger: ' + k)
+                raise ValueError('unrecognized logging: ' + k)
         if self.config.status == ':SQLite3:':
             self.state = provider.SQLiteStateStore(self.loggers['sqlite'].conn)
         else:
@@ -45,22 +42,22 @@ class BotInstance:
         for k, v in self.config.protocols.items():
             try:
                 if v.get('enabled', True):
-                    p = self.protocols[k] = provider.protocols[k](v, self.bus)
+                    p = self.protocols[k] = provider.protocols[k](self.config, self.bus)
                     for proxy in v.get('proxies') or ():
                         self.protocols[proxy] = p
                     t = threading.Thread(target=p.start_polling, name=k)
                     t.daemon = True
                     t.start()
-                    logger.info('Started protocol: ' + k)
+                    logging.info('Started protocol: ' + k)
                     self.threads.append(t)
             except KeyError:
                 raise ValueError('unrecognized protocol: ' + v)
-        logger.info('Satellite launched.')
+        logging.info('Satellite launched.')
         for t in self.threads:
             try:
                 t.join()
             except KeyboardInterrupt:
-                logger.warning('Thread "%s" died with ^C.' % t.name)
+                logging.warning('Thread "%s" died with SIGINT.' % t.name)
 
     def exit(self):
         self.bus.post(None)
@@ -69,7 +66,7 @@ class BotInstance:
         self.state.close()
         for v in self.loggers.values():
             v.close()
-        logger.info('Exited cleanly.')
+        logging.info('Exited cleanly.')
 
 class MessageBus:
     def __init__(self, handler):

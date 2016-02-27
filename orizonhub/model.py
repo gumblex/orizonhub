@@ -17,6 +17,7 @@ Message = collections.namedtuple('Message', (
     'fwd_date', # Forwarded message time (Telegram): int (unix timestamp) or None
     'reply',    # Reply message: Message or None
     'mtype'     # Protocol provider set: 'group', 'othergroup' or 'private'
+    'alttext'   # Protocol provider set, for media contents: str or None
 ))
 
 Request = collections.namedtuple('Request', ('cmd', 'expr', 'kwargs'))
@@ -26,8 +27,8 @@ class User(collections.namedtuple('User', (
         'protocol',   # Protocol name: str ('telegram', 'irc', ...)
         # Protocol in User use 'telegram' as general name
         'type',       # Protocol-specified type: str
-        # Telegram:      'private', 'group' (contains 'supergroup'), 'channel'
-        # IRC and other: 'private', 'group'
+        # Telegram:      'user', 'group' (contains 'supergroup'), 'channel'
+        # IRC and other: 'user', 'group'
         'pid',        # Protocol-specified message id: int or None
         'username',   # Protocol-specified username: str or None
         'first_name', # Protocol-specified first name or full name: str or None
