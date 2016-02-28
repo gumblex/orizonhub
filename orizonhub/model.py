@@ -33,7 +33,7 @@ class User(collections.namedtuple('User', (
         'username',   # Protocol-specified username: str or None
         'first_name', # Protocol-specified first name or full name: str or None
         'last_name',  # Protocol-specified last name: str or None
-        'alias'       # Canonical name alias: str
+        'alias'       # Canonical name alias: str or None
     ))):
     UnameKey = collections.namedtuple('UnameKey', ('protocol', 'username'))
     PidKey = collections.namedtuple('PidKey', ('protocol', 'pid'))
@@ -47,7 +47,7 @@ Command = collections.namedtuple('Command',
                                  ('func', 'usage', 'protocol', 'dependency'))
 Response = collections.namedtuple('Response', (
     'text', # Reply text: str
-    'info', # Other info or structured answer: dict
+    'info', # Other info or structured answer: dict or None
     'reply' # Replied message: Message
 ))
 
@@ -65,9 +65,10 @@ class Logger:
         pass
 
 class Protocol:
-    def __init__(self, config, bus):
+    def __init__(self, config, bus, pastebin):
         self.config = config
         self.bus = bus
+        self.pastebin = pastebin
 
     def start_polling(self):
         pass

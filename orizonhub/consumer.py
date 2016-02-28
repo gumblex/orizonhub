@@ -44,13 +44,16 @@ class MessageHandler:
                 return self.dispatch_gh(msg)
 
     def respond(self, res):
-        for n, p in self.protocols.items():
-            if (n == self.config.main_protocol
-                and res.reply and res.reply.mtype == 'group'):
-                fut = self.executor.submit(p.send, (res,))
-                fut.add_done_callback(self._resp_log_cb)
-            else:
-                self.executor.submit(p.send, (res,))
+        # res.reply must be Message
+        if res.reply.mtype == 'group':
+            for n, p in self.protocols.items():
+                if n == self.config.main_protocol:
+                    fut = self.executor.submit(p.send, (res,))
+                    fut.add_done_callback(self._resp_log_cb)
+                else:
+                    self.executor.submit(p.send, (res,))
+        else:
+            self.executor.submit(self.protocols[res.reply.protocol].send, (res,))
 
     def _resp_log_cb(fut):
         msg = fut.result()

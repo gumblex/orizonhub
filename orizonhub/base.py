@@ -29,6 +29,13 @@ class BotInstance:
         logging.info('Bot instance initialized.')
 
     def start(self):
+        services = self.config.services
+        if services.pastebin == 'self':
+            self.pastebin = provider.SimplePasteBin(services.cachepath, services.mediaurl)
+        elif services.pastebin == 'vim-cn':
+            self.pastebin = provider.VimCN(cachepath)
+        else:
+            self.pastebin = provider.DummyPasteBin()
         for k, v in self.config.loggers.items():
             try:
                 self.loggers[k] = provider.loggers[k](v, self.timezone)
@@ -42,7 +49,7 @@ class BotInstance:
         for k, v in self.config.protocols.items():
             try:
                 if v.get('enabled', True):
-                    p = self.protocols[k] = provider.protocols[k](self.config, self.bus)
+                    p = self.protocols[k] = provider.protocols[k](self.config, self.bus, self.pastebin)
                     for proxy in v.get('proxies') or ():
                         self.protocols[proxy] = p
                     t = threading.Thread(target=p.start_polling, name=k)

@@ -6,6 +6,7 @@ from .irc import IRCProtocol
 from .rawsocket import RawSocketProtocol
 from .telegrambot import TelegramBotProtocol
 from .telegramcli import TelegramCliProtocol
+from .pastebin import DummyPasteBin, SimplePasteBin, VimCN
 from .logger import Logger, TextLogger, SQLiteLogger, BasicStateStore, SQLiteStateStore
 
 loggers = {

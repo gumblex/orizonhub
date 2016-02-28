@@ -54,3 +54,25 @@ class LRUCache:
             if len(self.cache) >= self.capacity:
                 self.cache.popitem(last=False)
         self.cache[key] = value
+
+def smartname(user, limit=20):
+    if not user.protocol.startswith('telegram') and user.username:
+        un = user.username
+    elif user.alias:
+        un = user.alias
+    elif user.first_name:
+        un = user.first_name
+        if user.last_name:
+            un += ' ' + user.last_name
+    elif user.username:
+        un = user.username
+    else:
+        un = '<%s>' % 'Unknown'[:limit-2]
+    while len(un) > limit:
+        unl = un.rsplit(' ', 1)
+        if len(unl) > 1:
+            un = unl[0]
+        else:
+            un = un[:limit]
+    else:
+        return un

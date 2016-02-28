@@ -19,11 +19,13 @@ class RawSocketProtocol(Protocol):
     ==> {"type": "response", "response": <Response>}
     '''
 
-    def __init__(self, config, bus):
+    def __init__(self, config, bus, pastebin):
         self.config = config
         self.bus = bus
+        self.pastebin = pastebin
         self.handlers = []
-        self.sockhdl = _request_handler(self.handlers, bus)
+        self.protocols = {}
+        self.sockhdl = _request_handler(self.handlers, self.protocols, bus)
         address = config.protocols.socket.address
         if type(address) == tuple:
             self.sockserv = socketserver.TCPServer(address, self.sockhdl)
@@ -38,8 +40,7 @@ class RawSocketProtocol(Protocol):
             h.send(response)
 
     def forward(self, msg, protocol):
-        for h in self.handlers:
-            h.send(msg)
+        self.protocols[protocol].send(msg)
 
     def exit(self):
         try:
@@ -52,7 +53,7 @@ class RawSocketProtocol(Protocol):
             except Exception:
                 pass
 
-def _request_handler(registry, bus):
+def _request_handler(registry, protocols, bus):
     class RawSocketHandler(socketserver.BaseRequestHandler):
         def setup(self):
             registry.append(self)
@@ -64,7 +65,9 @@ def _request_handler(registry, bus):
                     obj = json.loads(self.conn.recv_bytes().decode('utf-8'))
                 except EOFError:
                     break
-                if obj.get('async', True):
+                if obj['type'] == 'register':
+                    protocols[obj['protocol']] = self
+                elif obj.get('async', True):
                     bus.post(nt_from_dict(Message, obj['message'], None))
                     self.conn.send_bytes(json.dumps(True).encode('utf-8'))
                 else:

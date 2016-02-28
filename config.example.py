@@ -66,7 +66,10 @@ config = {
     },
     'forward': ['irc', 'telegram', 'http', 'skype'],
     'services': {
-        'mediapath': 'server/img',
+        'cachepath': 'server/img',
+        # can be None, 'self', 'vim-cn'
+        'pastebin': 'self',
+        # for 'self'
         'mediaurl': 'https://app.example.com/img/'
     }
 }
