@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import enum
 import collections
 
 Message = collections.namedtuple('Message', (
@@ -16,7 +17,7 @@ Message = collections.namedtuple('Message', (
     'fwd_src',  # Forwarded from (Telegram): User or None
     'fwd_date', # Forwarded message time (Telegram): int (unix timestamp) or None
     'reply',    # Reply message: Message or None
-    'mtype'     # Protocol provider set: 'group', 'othergroup' or 'private'
+    'mtype',    # Protocol provider set: 'group', 'othergroup' or 'private'
     'alttext'   # Protocol provider set, for media contents: str or None
 ))
 
@@ -26,9 +27,9 @@ class User(collections.namedtuple('User', (
         'id',         # User id as in database: int or None (unknown)
         'protocol',   # Protocol name: str ('telegram', 'irc', ...)
         # Protocol in User use 'telegram' as general name
-        'type',       # Protocol-specified type: str
-        # Telegram:      'user', 'group' (contains 'supergroup'), 'channel'
-        # IRC and other: 'user', 'group'
+        'type',       # Protocol-specified type: UserType
+        # Telegram:      user, group (contains 'supergroup'), channel
+        # IRC and other: user, group
         'pid',        # Protocol-specified message id: int or None
         'username',   # Protocol-specified username: str or None
         'first_name', # Protocol-specified first name or full name: str or None
@@ -42,6 +43,12 @@ class User(collections.namedtuple('User', (
             return self.UnameKey(self.protocol, self.username)
         else:
             return self.PidKey(self.protocol, self.pid)
+
+class UserType(enum.IntEnum):
+    user = 1
+    group = 2
+    # to be compatible with tg-cli
+    channel = 5
 
 Command = collections.namedtuple('Command',
                                  ('func', 'usage', 'protocol', 'dependency'))
@@ -73,13 +80,13 @@ class Protocol:
     def start_polling(self):
         pass
 
-    def send(self, response):
+    def send(self, response, protocol):
         # -> Message
-        raise NotImplementedError
+        pass
 
     def forward(self, msg, protocol):
         # -> Message
-        raise NotImplementedError
+        pass
 
     def exit(self):
         pass

@@ -64,7 +64,7 @@ config = {
             ]
         }
     },
-    'forward': ['irc', 'telegram', 'http', 'skype'],
+    'forward': ['irc', 'telegrambot', 'http', 'skype'],
     'services': {
         'cachepath': 'server/img',
         # can be None, 'self', 'vim-cn'

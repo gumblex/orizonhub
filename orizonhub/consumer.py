@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import shlex
+import queue
 import logging
 import collections
 import concurrent.futures
 
 import pytz
 
-from .model import Message, Request, Response
+from .model import Request, Response
 from .provider import command
 
 logger = logging.getLogger('msghandler')
@@ -25,17 +25,17 @@ class MessageHandler:
         self.usernames = [p.username for p in config.protocols.values()
                           if 'username' in p]
 
-    def __call__(self, msg):
+    def process(self, msg):
         logger.debug(msg)
         if isinstance(msg, Request):
             return self.dispatch(msg)
         else:
             if msg.mtype == 'group':
                 for n, l in self.loggers.items():
-                    self.executor.submit(l.log, (msg,))
+                    self.submit_task(l.log, msg)
                 for n in self.config.forward:
                     if n != msg.protocol:
-                        self.executor.submit(self.protocols[n].forward, (msg, n))
+                        self.submit_task(self.protocols[n].forward, msg, n)
             req = self.parse_cmd(msg.text) if msg.text else None
             if req:
                 logger.debug('parsed request: %s', req)
@@ -48,17 +48,36 @@ class MessageHandler:
         if res.reply.mtype == 'group':
             for n, p in self.protocols.items():
                 if n == self.config.main_protocol:
-                    fut = self.executor.submit(p.send, (res,))
+                    fut = self.submit_task(p.send, res, n)
                     fut.add_done_callback(self._resp_log_cb)
                 else:
-                    self.executor.submit(p.send, (res,))
+                    self.submit_task(p.send, res, n)
         else:
-            self.executor.submit(self.protocols[res.reply.protocol].send, (res,))
+            pn = res.reply.protocol
+            self.submit_task(self.protocols[pn].send, res, pn)
 
-    def _resp_log_cb(fut):
+    def __call__(self, msg, respond=True):
+        def _do_process(msg, respond):
+            try:
+                r = self.process(msg)
+            except Exception:
+                logging.exception('Failed to process a message: %s', msg)
+            if respond and r:
+                try:
+                    self.respond(r)
+                except Exception:
+                    logging.exception('Failed to respond to a message: %s', r)
+            else:
+                return r
+        return self.executor.submit(_do_process, msg, respond)
+
+    def _resp_log_cb(self, fut):
         msg = fut.result()
+        if msg is None:
+            logging.warning('%s.send() returned None', self.config.main_protocol)
+            return
         for n, l in self.loggers.items():
-            self.executor.submit(l.log, (msg,))
+            self.submit_task(l.log, msg)
 
     def parse_cmd(self, text):
         t = text.strip().split(' ', 1)
@@ -81,7 +100,11 @@ class MessageHandler:
                 or c.dependency and c.dependency not in self.providers):
             if msg:
                 req.kwargs['msg'] = msg
-            r = c.func(req.expr, **req.kwargs)
+            try:
+                r = c.func(req.expr, **req.kwargs)
+            except Exception:
+                logger.exception('Failed to execute: %s', req)
+                return None
             logger.debug('response: %s', r)
             if r:
                 if not isinstance(r, Response):
@@ -95,8 +118,20 @@ class MessageHandler:
         for gh in command.general_handlers.values():
             if not (gh.protocol and msg.protocol not in gh.protocol
                     or gh.dependency and gh.dependency not in self.providers):
-                r = gh.func(msg)
+                try:
+                    r = gh.func(msg)
+                except Exception:
+                    logger.exception('Failed to execute general handler: %s', gh)
+                    continue
                 if r:
                     if not isinstance(r, Response):
                         r = Response(r, None, msg)
                     return r
+
+    def submit_task(self, fn, *args, **kwargs):
+        def func_noerr(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Exception:
+                logging.exception('Async function failed.')
+        return self.executor.submit(func_noerr, *args, **kwargs)

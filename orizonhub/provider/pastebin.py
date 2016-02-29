@@ -100,7 +100,7 @@ class SimplePasteBin(BasePasteBin):
 class VimCN(BasePasteBin):
     def geturl(self, filename):
         fpath = os.path.join(self.cachepath, filename)
-        if os.path.splitext(filename)[1] in imgfmt
+        if os.path.splitext(filename)[1] in imgfmt:
             r = requests.post('http://img.vim-cn.com/', files={'name': open(fpath, 'rb')})
         elif 23 <= os.path.getsize(fpath) <= 64 * 1024:
             r = requests.post('http://p.vim-cn.com/', data={'vimcn': open(fpath, 'rb')})

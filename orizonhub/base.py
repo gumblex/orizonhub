@@ -7,7 +7,6 @@ import threading
 import collections
 
 from . import utils, provider
-from .model import User
 from .consumer import MessageHandler
 
 import pytz
@@ -33,7 +32,7 @@ class BotInstance:
         if services.pastebin == 'self':
             self.pastebin = provider.SimplePasteBin(services.cachepath, services.mediaurl)
         elif services.pastebin == 'vim-cn':
-            self.pastebin = provider.VimCN(cachepath)
+            self.pastebin = provider.VimCN(services.cachepath)
         else:
             self.pastebin = provider.DummyPasteBin()
         for k, v in self.config.loggers.items():
@@ -51,7 +50,7 @@ class BotInstance:
                 if v.get('enabled', True):
                     p = self.protocols[k] = provider.protocols[k](self.config, self.bus, self.pastebin)
                     for proxy in v.get('proxies') or ():
-                        self.protocols[proxy] = p
+                        self.protocols[proxy[0]] = p
                     t = threading.Thread(target=p.start_polling, name=k)
                     t.daemon = True
                     t.start()
@@ -60,37 +59,27 @@ class BotInstance:
             except KeyError:
                 raise ValueError('unrecognized protocol: ' + v)
         logging.info('Satellite launched.')
-        for t in self.threads:
-            try:
+        try:
+            for t in self.threads:
                 t.join()
-            except KeyboardInterrupt:
-                logging.warning('Thread "%s" died with SIGINT.' % t.name)
+        except KeyboardInterrupt:
+            logging.warning('SIGINT received.')
 
     def exit(self):
-        self.bus.post(None)
         for v in self.protocols.values():
             v.exit()
-        self.state.close()
+        if self.state:
+            self.state.close()
         for v in self.loggers.values():
             v.close()
         logging.info('Exited cleanly.')
 
 class MessageBus:
     def __init__(self, handler):
-        self.msg_q = queue.Queue()
         self.handler = handler
 
     def post(self, msg):
-        self.msg_q.put(msg)
-
-    def post_sync(self, msg):
         return self.handler(msg)
 
-    def start_polling(self):
-        while 1:
-            m = self.msg_q.get()
-            if m is None:
-                return
-            r = self.handler(msg)
-            if r:
-                self.handler.respond(r)
+    def post_sync(self, msg):
+        return self.handler(msg, False).result()

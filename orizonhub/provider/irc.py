@@ -7,7 +7,7 @@ import queue
 import logging
 
 from ..utils import smartname
-from ..model import Protocol, Message, User
+from ..model import Protocol, Message, User, UserType
 from .libirc import IRCConnection
 
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
@@ -24,9 +24,9 @@ class IRCProtocol(Protocol):
         # self.rate: max interval
         self.rate = 1/2
         self.last_sent = 0
-        self.identity = User(None, 'irc', 'user', None, self.cfg.username,
+        self.identity = User(None, 'irc', UserType.user, None, self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
-        self.dest = User(None, 'irc', 'group', None, self.cfg.channel,
+        self.dest = User(None, 'irc', UserType.group, None, self.cfg.channel,
                          self.cfg.channel, None, config.group_name)
         self.proxies = [(p, re.compile(n), re.compile(m)) for p, n, m in self.cfg.proxies]
         # IRC messages are always lines of characters terminated with a CR-LF
@@ -56,7 +56,7 @@ class IRCProtocol(Protocol):
             self.checkircconn()
             line = self.ircconn.parse(block=False)
             mtime = int(time.time())
-            logging.debug('IRC: %s', line)
+            #logging.debug('IRC: %s', line)
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
@@ -67,15 +67,15 @@ class IRCProtocol(Protocol):
                     continue
                 if line["dest"] == self.cfg.username:
                     mtype = 'private'
-                    dest = self.identity
+                    src = dest = self._make_user(line["nick"])
                 elif line["dest"] == self.cfg.channel:
                     mtype = 'group'
+                    src = self._make_user(line["nick"])
                     dest = self.dest
                 else:
                     continue
                 # should use /whois and cache to get realname?
                 protocol = 'irc'
-                src = self._make_user(line["nick"])
                 action = re_ircaction.match(line["msg"])
                 if action:
                     text = action.group(1)
@@ -97,25 +97,19 @@ class IRCProtocol(Protocol):
                     protocol, None, src, dest, text, media, mtime,
                     None, None, None, mtype, None if alttext == text else alttext
                 ))
-            try:
-                line = self.send_q.get_nowait()
-                wait = 1/self.rate - time.perf_counter() + last_sent
-                if wait > 0:
-                    time.sleep(wait)
-                ircconn.say(self.cfg.channel, line)
-                last_sent = time.perf_counter()
-            except queue.Empty:
-                time.sleep(.2)
+            time.sleep(.2)
 
-    def send(self, response):
+    def send(self, response, protocol):
         # -> Message
+        if protocol != 'irc':
+            return
         lines = response.text.splitlines()
         text = smartname(response.reply.src) + ': '
         if len(lines) < 3:
             text += ' '.join(lines)
         else:
             text += lines[0] + ' […] ' + lines[-1]
-        self.say(text)
+        self.say(text, response.reply.chat)
         return Message(
             'irc', None, self.identity, response.reply.chat, text, None,
             int(time.time()), None, None, response.reply,
@@ -125,6 +119,8 @@ class IRCProtocol(Protocol):
     def forward(self, msg, protocol):
         # -> Message
         # `protocol` is ignored
+        if protocol != 'irc':
+            return
         if msg.fwd_src:
             text = 'Fwd %s: %s' % (smartname(msg.fwd_src), msg.text)
         elif msg.reply:
@@ -157,11 +153,11 @@ class IRCProtocol(Protocol):
                 lines = ['<long text> ' + url]
         return lines
 
-    def say(self, line):
+    def say(self, line, dest=None):
         wait = self.rate - time.perf_counter() + self.last_sent
         if wait > 0:
             time.sleep(wait)
-        self.ircconn.say(self.cfg.channel, line)
+        self.ircconn.say(dest or self.cfg.channel, line)
         last_sent = time.perf_counter()
 
     @staticmethod
@@ -180,8 +176,9 @@ class IRCProtocol(Protocol):
     @staticmethod
     def _make_user(nick, protocol='irc', realname=None, ident=None):
         # the ident is not used at present
-        return User(None, protocol, 'user', None, nick, realname, None, nick.rstrip('_'))
+        return User(None, protocol, UserType.user, None,
+                    nick, realname, None, nick.rstrip('_'))
 
     def exit(self):
         self.run = False
-        self.ircconn.quit('SIGINT received.')
+        self.ircconn.quit('SIGINT received')

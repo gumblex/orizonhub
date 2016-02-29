@@ -35,12 +35,13 @@ class RawSocketProtocol(Protocol):
     def start_polling(self):
         self.sockserv.serve_forever()
 
-    def send(self, response):
+    def send(self, response, protocol):
         for h in self.handlers:
             h.send(response)
 
     def forward(self, msg, protocol):
-        self.protocols[protocol].send(msg)
+        if protocol in self.protocols:
+            self.protocols[protocol].send(msg)
 
     def exit(self):
         try:

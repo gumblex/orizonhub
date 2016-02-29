@@ -45,6 +45,10 @@ def ghd_blackgun(msg):
 def ghd_welcome(msg):
     ...
 
+@register_handler('private')
+def ghd_private(msg):
+    ...
+
 ############################################################
 # Commands
 

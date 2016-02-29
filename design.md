@@ -57,15 +57,24 @@ CREATE TABLE IF NOT EXISTS messages (
 **REPLACE INTO**.
 
 ```sql
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY,
 	protocol TEXT NOT NULL,
+	type INTEGER NOT NULL,
 	pid INTEGER, -- protocol-specified id
 	username TEXT,
 	first_name TEXT,
 	last_name TEXT,
 	alias TEXT
 )
+```
+
+```python
+class UserType(enum.IntEnum):
+    user = 1
+    group = 2
+    # to be compatible with tg-cli
+    channel = 5
 ```
 
 ## Message Path
