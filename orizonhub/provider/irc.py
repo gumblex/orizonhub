@@ -28,7 +28,7 @@ class IRCProtocol(Protocol):
                              config.bot_fullname, None, config.bot_nickname)
         self.dest = User(None, 'irc', UserType.group, None, self.cfg.channel,
                          self.cfg.channel, None, config.group_name)
-        self.proxies = [(p, re.compile(n), re.compile(m)) for p, n, m in self.cfg.proxies]
+        self.proxies = {p: (re.compile(n), re.compile(m)) for p, n, m in self.cfg.proxies}
         # IRC messages are always lines of characters terminated with a CR-LF
         # (Carriage Return - Line Feed) pair, and these messages SHALL NOT
         # exceed 512 characters in length, counting all characters including
@@ -78,13 +78,14 @@ class IRCProtocol(Protocol):
                 protocol = 'irc'
                 action = re_ircaction.match(line["msg"])
                 if action:
-                    text = action.group(1)
+                    text = action.group(1).strip()
                     media = {'action': True}
                 else:
-                    text = line["msg"]
+                    text = line["msg"].strip()
                     media = None
                 # OrzTox bot have actions and quotes
-                for p, n, m in self.proxies:
+                for p, val in self.proxies.items():
+                    n, m = val
                     if n.match(line["nick"]):
                         mt = m.match(text)
                         if mt:
@@ -101,6 +102,7 @@ class IRCProtocol(Protocol):
 
     def send(self, response, protocol):
         # -> Message
+        # sending to proxies is not supported
         if protocol != 'irc':
             return
         lines = response.text.splitlines()
@@ -119,12 +121,14 @@ class IRCProtocol(Protocol):
     def forward(self, msg, protocol):
         # -> Message
         # `protocol` is ignored
-        if protocol != 'irc':
+        if protocol != 'irc' or msg.protocol in self.proxies:
             return
         if msg.fwd_src:
             text = 'Fwd %s: %s' % (smartname(msg.fwd_src), msg.text)
         elif msg.reply:
             text = '%s: %s' % (smartname(msg.reply.src), msg.text)
+        else:
+            text = msg.text
         lines = self.longtext(text, msg.media and msg.media.get('action'))
         for l in lines:
             self.say(l)
