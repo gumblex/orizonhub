@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS messages (
 	media TEXT,
 	time INTEGER,
 	fwd_src INTEGER,
-	fwd_date INTEGER,
+	fwd_time INTEGER,
 	reply_id INTEGER,
 	FOREIGN KEY(src) REFERENCES users(id)
 )

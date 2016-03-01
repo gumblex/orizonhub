@@ -3,7 +3,6 @@
 
 import re
 import time
-import queue
 import logging
 
 from ..utils import smartname
@@ -14,11 +13,10 @@ re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 
 class IRCProtocol(Protocol):
-    def __init__(self, config, bus, pastebin):
+    def __init__(self, config, bus):
         self.config = config
         self.cfg = config.protocols.irc
         self.bus = bus
-        self.pastebin = pastebin
         self.ircconn = None
         self.run = True
         # self.rate: max interval
@@ -145,7 +143,7 @@ class IRCProtocol(Protocol):
         url = None
         if len(lines) > 3:
             try:
-                url = self.pastebin.paste_text(text)
+                url = self.bus.pastebin.paste_text(text)
             except NotImplementedError:
                 pass
             except Exception:
@@ -162,7 +160,7 @@ class IRCProtocol(Protocol):
         if wait > 0:
             time.sleep(wait)
         self.ircconn.say(dest or self.cfg.channel, line)
-        last_sent = time.perf_counter()
+        self.last_sent = time.perf_counter()
 
     @staticmethod
     def _line_wrap(lines, max_length):
@@ -174,7 +172,7 @@ class IRCProtocol(Protocol):
                         break
                 yield l[:ch-1]
                 l = l[ch-1:]
-            else:
+            elif l:
                 yield l
 
     @staticmethod
@@ -183,6 +181,7 @@ class IRCProtocol(Protocol):
         return User(None, protocol, UserType.user, None,
                     nick, realname, None, nick.rstrip('_'))
 
-    def exit(self):
-        self.run = False
-        self.ircconn.quit('SIGINT received')
+    def close(self):
+        if self.run:
+            self.run = False
+            self.ircconn.quit('SIGINT received')

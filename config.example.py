@@ -45,7 +45,6 @@ config = {
             'token': '123456789:AbCdEf_1234567890ABCDEFGHIJKLMNOPQR',
             # negative as in API response
             'groupid': -1001001023456,
-            'servemedia': 'self',
             'username': 'notorzdigbot'
         },
         'telegramcli': {

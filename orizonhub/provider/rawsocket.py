@@ -19,10 +19,10 @@ class RawSocketProtocol(Protocol):
     ==> {"type": "response", "response": <Response>}
     '''
 
-    def __init__(self, config, bus, pastebin):
+    def __init__(self, config, bus):
         self.config = config
         self.bus = bus
-        self.pastebin = pastebin
+        self.pastebin = bus.pastebin
         self.handlers = []
         self.protocols = {}
         self.sockhdl = _request_handler(self.handlers, self.protocols, bus)
@@ -43,7 +43,7 @@ class RawSocketProtocol(Protocol):
         if protocol in self.protocols:
             self.protocols[protocol].send(msg)
 
-    def exit(self):
+    def close(self):
         try:
             for h in self.handlers:
                 h.close()

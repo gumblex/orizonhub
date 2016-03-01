@@ -4,6 +4,8 @@
 import enum
 import collections
 
+__version__ = '2.0'
+
 Message = collections.namedtuple('Message', (
     'protocol', # Protocol name: str ('telegrambot', 'irc', ...)
     # Protocol in User use 'telegrambot' and 'telegramcli' because of
@@ -11,11 +13,11 @@ Message = collections.namedtuple('Message', (
     'pid',      # Protocol-specified message id: int or None
     'src',      # 'From' field: User
     'chat',     # Conversation the message belongs to: User
-    'text',     # Message text: str or None
+    'text',     # Message text: str
     'media',    # Extra information about media and service info: dict or None
     'time',     # Message time or receive time: int (unix timestamp)
     'fwd_src',  # Forwarded from (Telegram): User or None
-    'fwd_date', # Forwarded message time (Telegram): int (unix timestamp) or None
+    'fwd_time', # Forwarded message time (Telegram): int (unix timestamp) or None
     'reply',    # Reply message: Message or None
     'mtype',    # Protocol provider set: 'group', 'othergroup' or 'private'
     'alttext'   # Protocol provider set, for media contents: str or None
@@ -26,7 +28,7 @@ Request = collections.namedtuple('Request', ('cmd', 'expr', 'kwargs'))
 class User(collections.namedtuple('User', (
         'id',         # User id as in database: int or None (unknown)
         'protocol',   # Protocol name: str ('telegram', 'irc', ...)
-        # Protocol in User use 'telegram' as general name
+        # Protocol in User use 'telegram' as generic name
         'type',       # Protocol-specified type: UserType
         # Telegram:      user, group (contains 'supergroup'), channel
         # IRC and other: user, group
@@ -72,10 +74,9 @@ class Logger:
         pass
 
 class Protocol:
-    def __init__(self, config, bus, pastebin):
+    def __init__(self, config, bus):
         self.config = config
         self.bus = bus
-        self.pastebin = pastebin
 
     def start_polling(self):
         pass
@@ -88,5 +89,5 @@ class Protocol:
         # -> Message
         pass
 
-    def exit(self):
+    def close(self):
         pass

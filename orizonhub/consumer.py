@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import queue
 import logging
 import collections
 import concurrent.futures

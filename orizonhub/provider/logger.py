@@ -42,7 +42,7 @@ class SQLiteLogger(Logger):
             'media TEXT,'
             'time INTEGER,'
             'fwd_src INTEGER,'
-            'fwd_date INTEGER,'
+            'fwd_time INTEGER,'
             'reply_id INTEGER,'
             'FOREIGN KEY(src) REFERENCES users(id)'
         ')',
@@ -147,12 +147,12 @@ class SQLiteStateStore(BasicStateStore):
         self.conn = connection
         self.conn.execute('CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT)')
         self.conn.commit()
-        data = dict(self.conn.select('SELECT key, value FROM state'))
+        data = {k: json.loads(v) for k,v in self.conn.select('SELECT key, value FROM state')}
         super(BasicStateStore, self).__init__(data)
 
     def commit(self):
         for k, v in self.data:
-            self.conn.execute('REPLACE INTO state (key, value) VALUES (?,?)', (key, str(value)))
+            self.conn.execute('REPLACE INTO state (key, value) VALUES (?,?)', (key, json.dumps(value)))
         self.conn.commit()
 
     def close(self):

@@ -55,6 +55,11 @@ class LRUCache:
                 self.cache.popitem(last=False)
         self.cache[key] = value
 
+def timestring_a(seconds):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return '%d:%02d:%02d' % (h, m, s)
+
 def smartname(user, limit=20):
     if not user.protocol.startswith('telegram') and user.username:
         un = user.username
