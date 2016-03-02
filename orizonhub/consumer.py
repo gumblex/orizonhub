@@ -79,7 +79,7 @@ class MessageHandler:
             self.submit_task(l.log, msg)
 
     def parse_cmd(self, text):
-        t = text.strip().split(' ', 1)
+        t = text.strip().replace('\xa0', ' ').split(' ', 1)
         if not t:
             return None
         cmd = t[0].rsplit('@', 1)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
 import json
+import time
 import logging
 
-from . import tgcli
+from ..utils import timestring_a, smartname
 from ..model import __version__, Protocol, Message, User, UserType
 
 import requests
@@ -42,29 +44,57 @@ class TelegramBotProtocol(Protocol):
     def start_polling(self):
         while self.run:
             try:
-                updates = bot_api('getUpdates', offset=self.bus.state.get('tgbot.offset', 0), timeout=10)
-            except Exception as ex:
+                updates = self.bot_api('getUpdates', offset=self.bus.state.get('tgbot.offset', 0), timeout=10)
+            except Exception:
                 logging.exception('TelegramBot: Get updates failed.')
                 continue
             if updates:
                 logging.debug('TelegramBot: messages coming.')
                 self.bus.state['tgapi.offset'] = updates[-1]["update_id"] + 1
                 for upd in updates:
-                    self.bus.post(upd)
+                    if 'message' in upd:
+                        self.bus.post(upd['message'])
             time.sleep(.2)
+
+    def send(self, response, protocol):
+        # -> Message
+        kwargs = {}
+        if 'md' in response.info:
+            text = response.info['md']
+            kwargs['parse_mode'] = 'Markdown'
+        else:
+            text = response.text
+        for k in ('disable_web_page_preview', 'disable_notification', 'reply_markup'):
+            if k in response.info:
+                kwargs[k] = response.info[k]
+        if response.reply.protocol.startswith('telegram'):
+            kwargs['reply_to_message_id'] = response.reply.pid
+            chat_id = response.reply.src.pid
+        else:
+            text = '%s: %s' % (smartname(response.reply.src), text)
+            chat_id = self.dest.pid
+        m = self.sendmsg(text, chat_id)
+        return self._make_message(m)
+
+    def forward(self, msg, protocol):
+        # -> Message
+        pass
+
+    def close(self):
+        self.run = False
 
     def bot_api(self, method, **params):
         att = 1
         while att <= self.attempts and self.run:
             try:
-                req = HSession.get(self.url + method, params=params, timeout=45)
+                req = self.hsession.get(self.url + method, params=params, timeout=45)
                 retjson = req.content
                 ret = json.loads(retjson.decode('utf-8'))
                 break
             except Exception as ex:
                 if att < self.attempts:
                     time.sleep((att+1) * 2)
-                    change_session()
+                    self.change_session()
                 else:
                     raise ex
             att += 1
@@ -72,36 +102,70 @@ class TelegramBotProtocol(Protocol):
             raise BotAPIFailed(str(ret))
         return ret['result']
 
-    def servemedia(self, msg):
-        ## TODO
+    def sendmsg(self, text, chat_id, reply_to_message_id=None, **kwargs):
+        text = text.strip()
+        if not text:
+            logging.warning('Empty message ignored: %s, %s' % (chat_id, reply_to_message_id))
+            return
+        logging.info('sendMessage(%s): %s' % (len(text), text[:20]))
+        # 0-4096 characters.
+        if len(text) > 2048:
+            text = text[:2047] + '…'
+        reply_id = reply_to_message_id or None
+        return self.bot_api('sendMessage', chat_id=chat_id, text=text, reply_to_message_id=reply_id)
+
+    def _parse_media(self, media):
+        mt = media.keys() & frozenset(('audio', 'document', 'sticker', 'video', 'voice'))
+        file_ext = ''
+        if mt:
+            mt = mt.pop()
+            file_id = media[mt]['file_id']
+            file_size = media[mt].get('file_size')
+            if mt == 'sticker':
+                file_ext = '.webp'
+        elif 'photo' in media:
+            photo = max(media['photo'], key=lambda x: x['width'])
+            file_id = photo['file_id']
+            file_size = photo.get('file_size')
+            file_ext = '.jpg'
+        else:
+            return None
+        logging.debug('getFile: %r' % file_id)
+        fp = self.bot_api('getFile', file_id=file_id)
+        file_size = fp.get('file_size') or file_size or 0
+        file_path = fp.get('file_path')
+        if not file_path:
+            raise BotAPIFailed("can't get file_path for " + file_id)
+        file_ext = os.path.splitext(file_path)[1] or file_ext
+        cachename = file_id + file_ext
+        return (cachename, self.url_file + file_path, file_size)
+
+    def servemedia(self, media):
         '''
         Reply type and link of media. This only generates links for photos.
         '''
-        keys = tuple(media.keys() & MEDIA_TYPES)
-        if not keys:
+        if not media:
             return ''
-        ret = '<%s>' % keys[0]
-        if 'photo' in media:
-            servemode = CFG.get('servemedia')
-            if servemode:
-                fname, code = cachemedia(media)
-                if servemode == 'self':
-                    ret += ' %s%s' % (CFG['serveurl'], fname)
-                elif servemode == 'vim-cn':
-                    r = requests.post('http://img.vim-cn.com/', files={'name': open(os.path.join(CFG['cachepath'], fname), 'rb')})
-                    ret += ' ' + r.text
-        elif 'document' in media:
-            ret += ' %s type: %s' % (media['document'].get('file_name', ''), media['document'].get('mime_type', ''))
-        elif 'video' in media:
-            ret += ' ' + timestring_a(media['video'].get('duration', 0))
-        elif 'voice' in media:
-            ret += ' ' + timestring_a(media['voice'].get('duration', 0))
-        elif 'new_chat_title' in media:
+        ftype, fval = tuple(media.items())[0]
+        ret = '<%s>' % ftype
+        if 'new_chat_title' in media:
             ret += ' ' + media['new_chat_title']
+        else:
+            if ftype == 'document':
+                ret += ' %s' % (fval.get('file_name', ''))
+            elif ftype in ('video', 'voice'):
+                ret += ' ' + timestring_a(fval.get('duration', 0))
+            try:
+                ret += ' ' + self.bus.pastebin.paste_url(*self._parse_media(media))
+            except (TypeError, NotImplementedError):
+                # _parse_media returned None
+                pass
+            except Exception:
+                # ValueError, FileNotFoundError or network problems
+                logging.exception("can't paste a file: %s", media)
         return ret
 
-    @staticmethod
-    def _make_message(obj):
+    def _make_message(self, obj):
         if obj is None:
             return None
         chat = self._make_user(obj['chat'])
@@ -114,15 +178,17 @@ class TelegramBotProtocol(Protocol):
         else:
             # other group or channel
             mtype = 'othergroup'
-        if media:
-            alttext
+        text = obj.get('text') or obj.get('caption', '')
+        alttext = self.servemedia(self, media)
+        if alttext and text:
+            alttext = text + ' ' + alttext
         return Message(
             'telegrambot', obj['message_id'],
             # from: Optional. Sender, can be empty for messages sent to channels
-            self._make_user(obj.get('from') or obj['chat']), chat,
-            obj.get('text') or obj.get('caption', ''), media, date,
+            self._make_user(obj.get('from') or obj['chat']),
+            chat, text, media, obj['date'],
             self._make_user(obj.get('forward_from')), obj.get('forward_date'),
-            self._make_message(obj.get('reply_to_message')), mtype, alttext
+            self._make_message(obj.get('reply_to_message')), mtype, alttext or None
         )
 
     @staticmethod
@@ -148,6 +214,3 @@ class TelegramBotProtocol(Protocol):
         self.hsession = requests.Session()
         self.hsession.headers["User-Agent"] = self.useragent
         logging.warning('Session changed.')
-
-    def close(self):
-        self.run = False

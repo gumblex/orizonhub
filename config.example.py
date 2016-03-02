@@ -68,6 +68,7 @@ config = {
         'cachepath': 'server/img',
         # can be None, 'self', 'vim-cn'
         'pastebin': 'self',
+        'maxsize': 4194304,
         # for 'self'
         'mediaurl': 'https://app.example.com/img/'
     }

@@ -23,8 +23,9 @@ def retrieve(url, filename, raisestatus=True):
 
 class BasePasteBin:
 
-    def __init__(self, cachepath):
+    def __init__(self, cachepath, maxsize):
         self.cachepath = cachepath
+        self.maxsize = maxsize
 
     def geturl(self, filename):
         raise NotImplementedError
@@ -36,6 +37,8 @@ class BasePasteBin:
         return self.paste_data(data, filename)
 
     def paste_data(self, data, filename=None):
+        if len(data) > self.maxsize:
+            raise ValueError("data size exceeds maxsize")
         if not filename:
             filename = hashlib.sha1(data).hexdigest() + '.bin'
         with open(os.path.join(self.cachepath, filename), 'wb') as f:
@@ -43,8 +46,14 @@ class BasePasteBin:
         return self.geturl(filename)
 
     def paste_url(self, url, filename, size=None):
+        if size and size > self.maxsize:
+            raise ValueError("file size exceeds maxsize")
+        fpath = os.path.join(self.cachepath, filename)
         if not self.exists(filename, size):
-            retrieve(url, os.path.join(self.cachepath, filename))
+            retrieve(url, fpath)
+        if os.path.getsize(fpath) > self.maxsize:
+            self.remove(self, filename)
+            raise ValueError("file size exceeds maxsize")
         return self.geturl(filename)
 
     def exists(self, filename, size=None):
@@ -84,13 +93,17 @@ class DummyPasteBin(BasePasteBin):
         pass
 
 class SimplePasteBin(BasePasteBin):
-    def __init__(self, cachepath, baseurl, expire=3*86400):
+    def __init__(self, cachepath, maxsize, baseurl, expire=3*86400):
         self.cachepath = cachepath
+        self.maxsize = maxsize
         self.baseurl = baseurl
         self.expire = expire
 
     def geturl(self, filename):
-        return os.path.join(self.baseurl, filename)
+        fpath = os.path.join(self.baseurl, filename)
+        if not os.path.isfile(fpath):
+            raise FileNotFoundError(fpath)
+        return fpath
 
     def close(self):
         for f in os.listdir(self.cachepath):

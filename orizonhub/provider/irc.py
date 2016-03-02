@@ -172,8 +172,9 @@ class IRCProtocol(Protocol):
                         break
                 yield l[:ch-1]
                 l = l[ch-1:]
-            elif l:
-                yield l
+            else:
+                if l:
+                    yield l
 
     @staticmethod
     def _make_user(nick, protocol='irc', realname=None, ident=None):

@@ -27,7 +27,7 @@ class BotInstance:
     def start(self):
         services = self.config.services
         if services.pastebin == 'self':
-            self.bus.pastebin = provider.SimplePasteBin(services.cachepath, services.mediaurl)
+            self.bus.pastebin = provider.SimplePasteBin(services.cachepath, services.get('maxsize', 1048576), services.mediaurl)
         elif services.pastebin == 'vim-cn':
             self.bus.pastebin = provider.VimCN(services.cachepath)
         for k, v in self.config.loggers.items():

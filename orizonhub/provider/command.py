@@ -4,6 +4,7 @@
 import re
 import math
 import random
+import subprocess
 import collections
 
 from ..model import Command, Response as R
