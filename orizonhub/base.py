@@ -22,6 +22,7 @@ class BotInstance:
         self.threads = []
 
         self.bus = MessageBus(MessageHandler(config, self.protocols, self.loggers))
+        self.bus.timezone = self.timezone
         logging.info('Bot instance initialized.')
 
     def start(self):
@@ -73,6 +74,7 @@ class MessageBus:
         self.handler = handler
         self.pastebin = provider.DummyPasteBin()
         self.state = {}
+        self.timezone = None
 
     def post(self, msg):
         return self.handler(msg)

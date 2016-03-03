@@ -59,14 +59,30 @@ class TelegramBotProtocol(Protocol):
     def send(self, response, protocol):
         # -> Message
         kwargs = {}
-        if 'md' in response.info:
-            text = response.info['md']
-            kwargs['parse_mode'] = 'Markdown'
-        else:
-            text = response.text
         for k in ('disable_web_page_preview', 'disable_notification', 'reply_markup'):
             if k in response.info:
                 kwargs[k] = response.info[k]
+        if 'md' in response.info:
+            text = response.info['md']
+            kwargs['parse_mode'] = 'Markdown'
+        elif 'fwd' in response.info:
+            fmsgs = response.info['fwd']
+            if (len(response.info['fwd']) == 1
+                and fmsgs[0].pid and fmsgs[0].protocol.startswith('telegram')):
+                m = bot_api('forwardMessage', chat_id=response.reply.src.pid, from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid)
+                return self._make_message(m)
+            else:
+                lines = []
+                for m in messages:
+                    text.append('[%s] %s: %s' % (
+                        datetime.fromtimestamp(m.time, self.bus.timezone).strftime(
+                        '%Y-%m-%d %H:%M:%S'), smartname(m.src), m.text))
+                if lines:
+                    text = '\n'.join(lines)
+                else:
+                    text = 'Message%s not found.' % ('s' if len(messages) > 1 else '')
+        else:
+            text = response.text
         if response.reply.protocol.startswith('telegram'):
             kwargs['reply_to_message_id'] = response.reply.pid
             chat_id = response.reply.src.pid
@@ -78,7 +94,8 @@ class TelegramBotProtocol(Protocol):
 
     def forward(self, msg, protocol):
         # -> Message
-        pass
+        if protocol.startswith('telegram'):
+            pass
 
     def close(self):
         self.run = False
