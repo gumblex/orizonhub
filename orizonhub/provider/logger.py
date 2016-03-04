@@ -38,6 +38,7 @@ class SQLiteLogger(Logger):
             'protocol TEXT NOT NULL,'
             'pid INTEGER,'
             'src INTEGER,'
+            'dest INTEGER,'
             'text TEXT,'
             'media TEXT,'
             'time INTEGER,'
@@ -72,8 +73,9 @@ class SQLiteLogger(Logger):
         assert msg.mtype == 'group'
         self.update_user(msg.chat)
         src = self.update_user(msg.src).id
+        dest = self.update_user(msg.dest).id
         fwd_src = self.update_user(msg.fwd_src).id if msg.fwd_src else None
-        self.conn.execute('INSERT INTO messages (protocol, pid, src, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
+        self.conn.execute('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
 
     def update_user(self, user):
         '''

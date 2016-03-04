@@ -18,7 +18,7 @@ config = {
     },
     'loggers': {
         'sqlite': 'chatlogv2.db',
-        'text': 'chatlog.txt'
+        'textlog': 'chatlog.txt'
     },
     # for logging bot messages
     'main_protocol': 'telegrambot',

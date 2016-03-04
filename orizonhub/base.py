@@ -23,6 +23,7 @@ class BotInstance:
 
         self.bus = MessageBus(MessageHandler(config, self.protocols, self.loggers))
         self.bus.timezone = self.timezone
+        provider.command.bus = self.bus
         logging.info('Bot instance initialized.')
 
     def start(self):
@@ -86,3 +87,9 @@ class MessageBus:
         if self.state:
             self.state.close()
         self.pastebin.close()
+
+    def __getattr__(self, name):
+        try:
+            return self.handler.providers[name]
+        except KeyError:
+            raise AttributeError("handler %r not found" % name)

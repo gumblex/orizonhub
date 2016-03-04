@@ -18,6 +18,12 @@ class TelegramBotProtocol(Protocol):
     # media fields may change in the future, so use the inverse.
     STATIC_FIELDS = frozenset(('message_id', 'from', 'date', 'chat', 'forward_from',
                     'forward_date', 'reply_to_message', 'text', 'caption'))
+    METHODS = frozenset((
+        'getMe', 'sendMessage', 'forwardMessage', 'sendPhoto', 'sendAudio',
+        'sendDocument', 'sendSticker', 'sendVideo', 'sendVoice', 'sendLocation',
+        'sendChatAction', 'getUserProfilePhotos', 'getUpdates', 'setWebhook',
+        'getFile', 'answerInlineQuery'
+    ))
 
     def __init__(self, config, bus):
         self.config = config
@@ -42,6 +48,7 @@ class TelegramBotProtocol(Protocol):
                          None, config.group_name, None, config.group_name)
 
     def start_polling(self):
+        self.identity = self._make_user(self.bot_api('getMe'))
         while self.run:
             try:
                 updates = self.bot_api('getUpdates', offset=self.bus.state.get('tgbot.offset', 0), timeout=10)
@@ -130,6 +137,12 @@ class TelegramBotProtocol(Protocol):
             text = text[:2047] + '…'
         reply_id = reply_to_message_id or None
         return self.bot_api('sendMessage', chat_id=chat_id, text=text, reply_to_message_id=reply_id)
+
+    def __getattr__(self, name):
+        if name in self.METHODS:
+            return lambda **kwargs: self.bot_api(name, **kwargs)
+        else:
+            raise AttributeError
 
     def _parse_media(self, media):
         mt = media.keys() & frozenset(('audio', 'document', 'sticker', 'video', 'voice'))

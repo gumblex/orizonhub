@@ -11,8 +11,8 @@ from .logger import Logger, TextLogger, SQLiteLogger, BasicStateStore, SQLiteSta
 
 loggers = {
 'sqlite': SQLiteLogger,
-'text': TextLogger,
-'dummy': Logger
+'textlog': TextLogger,
+'dummylog': Logger
 }
 
 protocols = {
