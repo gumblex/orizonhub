@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-import time
 import json
 import logging
-import sqlite3
 import collections
 from datetime import datetime
 from logging.handlers import WatchedFileHandler
@@ -154,7 +152,7 @@ class SQLiteStateStore(BasicStateStore):
 
     def commit(self):
         for k, v in self.data:
-            self.conn.execute('REPLACE INTO state (key, value) VALUES (?,?)', (key, json.dumps(value)))
+            self.conn.execute('REPLACE INTO state (key, value) VALUES (?,?)', (k, json.dumps(v)))
         self.conn.commit()
 
     def close(self):

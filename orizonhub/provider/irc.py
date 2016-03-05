@@ -131,7 +131,7 @@ class IRCProtocol(Protocol):
         for l in lines:
             self.say(l)
         return Message(
-            'irc', None, self.identity, self.dest, '\n'.join(lines), msg.media,
+            None, 'irc', None, self.identity, self.dest, '\n'.join(lines), msg.media,
             int(time.time()), None, None, msg.reply, msg.mtype, msg.alttext
         )
 

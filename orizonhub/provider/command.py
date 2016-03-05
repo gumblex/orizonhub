@@ -99,13 +99,13 @@ def cmd_context(expr, msg=None):
     except Exception:
         return 'Syntax error. Usage: ' + cmd_context.__doc__
         return
-    typing(chatid)
+    #bus.status(msg.chat, 'typing')
     forwardmulti_t(range(mid - limit, mid + limit + 1), chatid, replyid)
 
 @register_command('quote', dependency='sqlite')
 def cmd_quote(expr, msg=None):
     '''/quote Send a today's random message.'''
-    typing(chatid)
+    #bus.status(msg.chat, 'typing')
     sec = daystart()
     msg = conn.execute('SELECT id FROM messages WHERE date >= ? AND date < ? ORDER BY RANDOM() LIMIT 1', (sec, sec + 86400)).fetchone()
     if msg is None:
@@ -149,7 +149,6 @@ def cmd_search(expr, msg=None):
         keyword = ''
     if username:
         uid = db_getuidbyname(username)
-    typing(chatid)
     if uid is None:
         keyword = ' '.join(expr)
         sqr = conn.execute("SELECT id, src, text, date FROM messages WHERE text LIKE ? ORDER BY date DESC LIMIT ? OFFSET ?", ('%' + keyword + '%', limit, offset)).fetchall()
@@ -359,13 +358,13 @@ def cmd_wyw(expr, msg=None):
     if not tinput:
         return 'Syntax error. Usage: ' + cmd_wyw.__doc__
         return
-    typing(chatid)
+    bus.status(msg.chat, 'typing')
     runapptask('wyw', (tinput, lang), (chatid, replyid))
 
 @register_command('say')
 def cmd_say(expr, msg=None):
     '''/say Say something interesting.'''
-    #typing(chatid)
+    #bus.status(msg.chat, 'typing')
     if expr:
         runapptask('reply', (expr,), (chatid, replyid))
     else:
@@ -376,7 +375,7 @@ def cmd_reply(expr, msg=None):
     '''/reply [question] Reply to the conversation.'''
     if 'forward_from' in msg and msg['chat']['id'] < 0:
         return
-    typing(chatid)
+    bus.status(msg.chat, 'typing')
     text = ''
     if 'reply_to_message' in msg:
         text = msg['reply_to_message'].get('text', '')

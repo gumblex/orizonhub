@@ -83,6 +83,9 @@ class MessageBus:
     def post_sync(self, msg):
         return self.handler(msg, False).result()
 
+    def status(self, dest, action):
+        self.handler.status(dest, action)
+
     def close(self):
         if self.state:
             self.state.close()

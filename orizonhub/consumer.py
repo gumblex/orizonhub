@@ -70,6 +70,10 @@ class MessageHandler:
                 return r
         return self.executor.submit(_do_process, msg, respond)
 
+    def status(self, dest, action):
+        for n, p in self.protocols.items():
+            self.submit_task(p.status, dest, action)
+
     def _resp_log_cb(self, fut):
         msg = fut.result()
         if msg is None:

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import signal
+import datetime
 import collections
 
 signames = {k: v for v, k in reversed(sorted(signal.__dict__.items()))
@@ -81,3 +82,19 @@ def smartname(user, limit=20):
             un = un[:limit]
     else:
         return un
+
+def fwd_to_text(messages, timezone, withid=False, withuser=True):
+    lines = []
+    for m in messages:
+        # [%d|%s] %s: %s
+        lines.append('[%s%s] %s%s' % (
+            str(messages.id) + '|' if withid and messages.id else '',
+            datetime.fromtimestamp(m.time, timezone).strftime(
+            '%Y-%m-%d %H:%M:%S'),
+            smartname(m.src) + ': ' if withuser else '',
+            m.text
+        ))
+    if lines:
+        return '\n'.join(lines)
+    else:
+        return 'Message%s not found.' % ('s' if len(messages) > 1 else '')

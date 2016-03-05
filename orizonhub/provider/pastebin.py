@@ -30,6 +30,13 @@ class BasePasteBin:
     def geturl(self, filename):
         raise NotImplementedError
 
+    def getpath(self, filename):
+        fpath = os.path.join(self.cachepath, filename)
+        if os.path.isfile(fpath):
+            return fpath
+        else:
+            raise FileNotFoundError(fpath)
+
     def paste_text(self, text, filename=None):
         data = text.encode('utf-8')
         if not filename:
@@ -59,7 +66,7 @@ class BasePasteBin:
     def exists(self, filename, size=None):
         fpath = os.path.join(self.cachepath, filename)
         return (os.path.isfile(fpath) and
-                (size is None or os.path.getsize(fpath) == file_size))
+                (size is None or os.path.getsize(fpath) == size))
 
     def remove(self, filename):
         try:

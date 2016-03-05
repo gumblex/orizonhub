@@ -6,7 +6,7 @@ import json
 import time
 import logging
 
-from ..utils import timestring_a, smartname
+from ..utils import timestring_a, smartname, fwd_to_text
 from ..model import __version__, Protocol, Message, User, UserType
 
 import requests
@@ -36,7 +36,12 @@ class TelegramBotProtocol(Protocol):
         self.useragent = 'OrizonHub/%s %s' % (__version__, self.hsession.headers["User-Agent"])
         self.hsession.headers["User-Agent"] = self.useragent
         self.run = True
-        self.rate = 1/2
+        # If you're sending bulk notifications to multiple users, the API will not
+        # allow more than 30 messages per second or so. Consider spreading out
+        # notifications over large intervals of 8—12 hours for best results.
+        # Also note that your bot will not be able to send more than 20 messages
+        # per minute to the same group.
+        self.rate = 20/60 # 1/30
         self.attempts = 2
         self.last_sent = 0
         # updated later
@@ -76,18 +81,10 @@ class TelegramBotProtocol(Protocol):
             fmsgs = response.info['fwd']
             if (len(response.info['fwd']) == 1
                 and fmsgs[0].pid and fmsgs[0].protocol.startswith('telegram')):
-                m = bot_api('forwardMessage', chat_id=response.reply.src.pid, from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid)
+                m = self.bot_api('forwardMessage', chat_id=response.reply.src.pid, from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid)
                 return self._make_message(m)
             else:
-                lines = []
-                for m in messages:
-                    text.append('[%s] %s: %s' % (
-                        datetime.fromtimestamp(m.time, self.bus.timezone).strftime(
-                        '%Y-%m-%d %H:%M:%S'), smartname(m.src), m.text))
-                if lines:
-                    text = '\n'.join(lines)
-                else:
-                    text = 'Message%s not found.' % ('s' if len(messages) > 1 else '')
+                text = fwd_to_text(fmsgs, self.bus.timezone)
         else:
             text = response.text
         if response.reply.protocol.startswith('telegram'):
@@ -104,10 +101,16 @@ class TelegramBotProtocol(Protocol):
         if protocol.startswith('telegram'):
             pass
 
+    def status(self, dest, action):
+        return self.bot_api('sendChatAction', chat_id=dest.pid, action=action)
+
     def close(self):
         self.run = False
 
     def bot_api(self, method, **params):
+        wait = self.rate - time.perf_counter() + self.last_sent
+        if wait > 0:
+            time.sleep(wait)
         att = 1
         while att <= self.attempts and self.run:
             try:
@@ -122,6 +125,7 @@ class TelegramBotProtocol(Protocol):
                 else:
                     raise ex
             att += 1
+        self.last_sent = time.perf_counter()
         if not ret['ok']:
             raise BotAPIFailed(str(ret))
         return ret['result']
@@ -213,7 +217,7 @@ class TelegramBotProtocol(Protocol):
         if alttext and text:
             alttext = text + ' ' + alttext
         return Message(
-            'telegrambot', obj['message_id'],
+            None, 'telegrambot', obj['message_id'],
             # from: Optional. Sender, can be empty for messages sent to channels
             self._make_user(obj.get('from') or obj['chat']),
             chat, text, media, obj['date'],
