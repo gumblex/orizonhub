@@ -74,19 +74,22 @@ class TelegramBotProtocol(Protocol):
         for k in ('disable_web_page_preview', 'disable_notification', 'reply_markup'):
             if k in response.info:
                 kwargs[k] = response.info[k]
-        if 'md' in response.info:
-            text = response.info['md']
-            kwargs['parse_mode'] = 'Markdown'
-        elif 'fwd' in response.info:
-            fmsgs = response.info['fwd']
-            if (len(response.info['fwd']) == 1
-                and fmsgs[0].pid and fmsgs[0].protocol.startswith('telegram')):
-                m = self.bot_api('forwardMessage', chat_id=response.reply.src.pid, from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid)
-                return self._make_message(m)
-            else:
-                text = fwd_to_text(fmsgs, self.bus.timezone)
-        else:
-            text = response.text
+        text = response.text
+        rtype = response.info.get('type')
+        if rtype:
+            if rtype == 'markdown':
+                text = response.text
+                kwargs['parse_mode'] = 'Markdown'
+            elif rtype == 'forward':
+                fmsgs = response.info['messages']
+                if (len(fmsgs) == 1 and fmsgs[0].pid
+                    and fmsgs[0].protocol.startswith('telegram')):
+                    m = self.bot_api('forwardMessage',
+                        chat_id=response.reply.src.pid,
+                        from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid)
+                    return self._make_message(m)
+                else:
+                    text = fwd_to_text(fmsgs, self.bus.timezone)
         if response.reply.protocol.startswith('telegram'):
             kwargs['reply_to_message_id'] = response.reply.pid
             chat_id = response.reply.src.pid
