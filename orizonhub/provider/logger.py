@@ -8,6 +8,7 @@ import collections
 from datetime import datetime
 from logging.handlers import WatchedFileHandler
 
+from ..utils import LRUCache
 from ..model import User, Logger
 from .sqlitedict import SqliteMultithread
 
@@ -43,7 +44,10 @@ class SQLiteLogger(Logger):
             'fwd_src INTEGER,'
             'fwd_time INTEGER,'
             'reply_id INTEGER,'
-            'FOREIGN KEY(src) REFERENCES users(id)'
+            'FOREIGN KEY (src) REFERENCES users(id),'
+            # For the purposes of UNIQUE constraints, NULL values are considered
+            # distinct from all other values, including other NULLs.
+            'UNIQUE (protocol, pid)'
         ')',
         'CREATE TABLE IF NOT EXISTS users ('
             'id INTEGER PRIMARY KEY,'
@@ -62,6 +66,7 @@ class SQLiteLogger(Logger):
         for c in self.SCHEMA:
             self.conn.execute(c)
         self.conn.commit()
+        self.msg_cache = LRUCache(50)
         self.user_cache = {}
         for row in self.conn.select('SELECT * FROM users'):
             u = User._make(row)
@@ -73,7 +78,9 @@ class SQLiteLogger(Logger):
         src = self.update_user(msg.src).id
         dest = self.update_user(msg.dest).id
         fwd_src = self.update_user(msg.fwd_src).id if msg.fwd_src else None
-        self.conn.execute('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
+        res = self.conn.change_one('INSERT OR IGNORE INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
+        # TODO: check conflict resulting res
+        self.msg_cache[res[1]] = msg
 
     def update_user(self, user):
         '''
@@ -116,6 +123,9 @@ class SQLiteLogger(Logger):
         elif cached != user:
             _update_user(uk, user)
         return ret
+
+    def getmsg(self, mid):
+        ...
 
     def select(self, req, arg=None):
         return self.conn.select(req, arg)
