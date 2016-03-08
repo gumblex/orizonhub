@@ -11,6 +11,8 @@ from ..model import __version__, Protocol, Message, User, UserType
 
 import requests
 
+logger = logging.getLogger('tgbot')
+
 class BotAPIFailed(Exception):
     pass
 
@@ -27,7 +29,7 @@ class TelegramBotProtocol(Protocol):
 
     def __init__(self, config, bus):
         self.config = config
-        self.cfg = config.protocols.telegramcli
+        self.cfg = config.protocols.telegrambot
         self.bus = bus
         self.pastebin = bus.pastebin
         self.url = 'https://api.telegram.org/bot%s/' % self.cfg.token
@@ -46,7 +48,7 @@ class TelegramBotProtocol(Protocol):
         self.last_sent = 0
         # updated later
         self.identity = User(None, 'telegramcli', UserType.user,
-                             int(self.cfg.token.split(':')), self.cfg.username,
+                             int(self.cfg.token.split(':')[0]), self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
         # auto updated
         self.dest = User(None, 'telegramcli', UserType.group, self.cfg.groupid,
@@ -65,10 +67,12 @@ class TelegramBotProtocol(Protocol):
                 self.bus.state['tgapi.offset'] = updates[-1]["update_id"] + 1
                 for upd in updates:
                     if 'message' in upd:
-                        self.bus.post(upd['message'])
+                        self.bus.post(self._make_message(upd['message']))
             time.sleep(.2)
 
     def send(self, response, protocol):
+        ######
+        #return
         # -> Message
         kwargs = {}
         for k in ('disable_web_page_preview', 'disable_notification', 'reply_markup'):
@@ -216,7 +220,7 @@ class TelegramBotProtocol(Protocol):
             # other group or channel
             mtype = 'othergroup'
         text = obj.get('text') or obj.get('caption', '')
-        alttext = self.servemedia(self, media)
+        alttext = self.servemedia(media)
         if alttext and text:
             alttext = text + ' ' + alttext
         return Message(

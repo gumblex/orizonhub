@@ -3,14 +3,17 @@
 
 import os
 import json
+import sqlite3
 import logging
 import collections
 from datetime import datetime
 from logging.handlers import WatchedFileHandler
 
 from ..utils import LRUCache
-from ..model import User, Logger
+from ..model import Message, User, Logger
 from .sqlitedict import SqliteMultithread
+
+logger = logging.getLogger('logger')
 
 class TextLogger(Logger):
     '''Logs messages with plain text. Rotating-friendly.'''
@@ -57,7 +60,7 @@ class SQLiteLogger(Logger):
             'username TEXT,'
             'first_name TEXT,'
             'last_name TEXT,'
-            'alias TEXT NOT NULL'
+            'alias TEXT'
         ')',
     )
 
@@ -70,7 +73,7 @@ class SQLiteLogger(Logger):
         self.user_cache = {}
         for row in self.conn.select('SELECT * FROM users'):
             u = User._make(row)
-            self.user_cache[u._key()] = u
+            self.user_cache[u.id] = self.user_cache[u._key()] = u
 
     def log(self, msg):
         assert msg.mtype == 'group'
@@ -78,9 +81,12 @@ class SQLiteLogger(Logger):
         src = self.update_user(msg.src).id
         dest = self.update_user(msg.dest).id
         fwd_src = self.update_user(msg.fwd_src).id if msg.fwd_src else None
-        res = self.conn.change_one('INSERT OR IGNORE INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
-        # TODO: check conflict resulting res
-        self.msg_cache[res[1]] = msg
+        res = self.conn.change_one('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
+        try:
+            self.conn.check_raise_error()
+            self.msg_cache[res[1]] = msg
+        except sqlite3.IntegrityError:
+            logger.warning('Conflict message: %s', msg)
 
     def update_user(self, user):
         '''
@@ -98,12 +104,12 @@ class SQLiteLogger(Logger):
 
         def _update_user(uk, user):
             self.conn.execute('UPDATE users SET protocol=?, username=?, first_name=?, last_name=?, alias=? WHERE id=?', (user.protocol, user.username, user.first_name, user.last_name, user.alias, user.id))
-            self.user_cache[uk] = user
+            self.user_cache[user.id] = self.user_cache[uk] = user
 
         def _new_user(uk, user):
             res = self.conn.change_one('INSERT INTO users (protocol, type, pid, username, first_name, last_name, alias) VALUES (?,?,?,?,?,?,?)', user[1:])
-            self.user_cache[uk] = newuser = User(res[1], *user[1:])
-            return newuser
+            self.user_cache[res[1]] = self.user_cache[uk] = User(res[1], *user[1:])
+            return self.user_cache[uk]
 
         uk = user._key()
         cached = self.user_cache.get(uk)
@@ -124,14 +130,36 @@ class SQLiteLogger(Logger):
             _update_user(uk, user)
         return ret
 
+    def getuser(self, uid):
+        try:
+            return self.user_cache[uid]
+        except KeyError:
+            u = User._make(self.conn.select_one('SELECT * FROM users WHERE id = ?',
+                           (uid,)))
+            self.user_cache[u.id] = self.user_cache[u._key()] = u
+            return u
+
     def getmsg(self, mid):
-        ...
+        res = self.msg_cache.get(mid)
+        if res:
+            return res
+        res = self.conn.select_one('SELECT protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id FROM messages WHERE id = ?', (mid,))
+        if res is None:
+            return None
+        protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id = res
+        msg = Message(
+            mid, protocol, pid, self.getuser(src), self.getuser(dest), text,
+            media and json.loads(media), time, fwd_src and self.getuser(fwd_src),
+            fwd_date, reply_id and self.getmsg(reply_id)
+        )
+        self.msg_cache[mid] = msg
+        return msg
 
     def select(self, req, arg=None):
         return self.conn.select(req, arg)
 
     def commit(self, blocking=True):
-        logging.debug('db committed.')
+        logger.debug('db committed.')
         self.conn.commit(blocking)
 
     def close(self):

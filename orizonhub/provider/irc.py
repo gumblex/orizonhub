@@ -12,6 +12,8 @@ from .libirc import IRCConnection
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 
+logger = logging.getLogger('irc')
+
 class IRCProtocol(Protocol):
     def __init__(self, config, bus):
         self.config = config
@@ -47,18 +49,18 @@ class IRCProtocol(Protocol):
         self.ircconn.setnick(self.cfg.username)
         self.ircconn.setuser(self.cfg.username, self.cfg.username)
         self.ircconn.join(self.cfg.channel)
-        logging.info('IRC (re)connected.')
+        logger.info('IRC (re)connected.')
 
     def start_polling(self):
         while self.run:
             self.checkircconn()
             line = self.ircconn.parse(block=False)
             mtime = int(time.time())
-            #logging.debug('IRC: %s', line)
+            #logger.debug('IRC: %s', line)
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
-                logging.info('I joined IRC channel: %s' % line['dest'])
+                logger.info('I joined IRC channel: %s' % line['dest'])
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
                 if self.cfg.ignore and re.match(self.cfg.ignore, line["nick"]):
@@ -147,7 +149,7 @@ class IRCProtocol(Protocol):
             except NotImplementedError:
                 pass
             except Exception:
-                logging.exception('Failed to paste the text')
+                logger.exception('Failed to paste the text')
             if url is None:
                 lines = lines[:3]
                 lines[-1] += ' […]'

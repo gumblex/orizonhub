@@ -10,11 +10,11 @@ import pytz
 from .model import Request, Response
 from .provider import command
 
-logger = logging.getLogger('msghandler')
+logger = logging.getLogger('handler')
 
 class MessageHandler:
     def __init__(self, config, protocols, loggers):
-        logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
+        # logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
         self.protocols = protocols
         self.loggers = loggers
@@ -60,12 +60,12 @@ class MessageHandler:
             try:
                 r = self.process(msg)
             except Exception:
-                logging.exception('Failed to process a message: %s', msg)
+                logger.exception('Failed to process a message: %s', msg)
             if respond and r:
                 try:
                     self.respond(r)
                 except Exception:
-                    logging.exception('Failed to respond to a message: %s', r)
+                    logger.exception('Failed to respond to a message: %s', r)
             else:
                 return r
         return self.executor.submit(_do_process, msg, respond)
@@ -77,7 +77,7 @@ class MessageHandler:
     def _resp_log_cb(self, fut):
         msg = fut.result()
         if msg is None:
-            logging.warning('%s.send() returned None', self.config.main_protocol)
+            logger.warning('%s.send() returned None', self.config.main_protocol)
             return
         for n, l in self.loggers.items():
             self.submit_task(l.log, msg)
@@ -136,5 +136,5 @@ class MessageHandler:
             try:
                 return fn(*args, **kwargs)
             except Exception:
-                logging.exception('Async function failed.')
+                logger.exception('Async function failed.')
         return self.executor.submit(func_noerr, *args, **kwargs)

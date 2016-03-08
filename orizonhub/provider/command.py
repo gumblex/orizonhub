@@ -4,6 +4,7 @@
 import re
 import math
 import random
+import logging
 import subprocess
 import collections
 
@@ -14,6 +15,8 @@ PREFIX = "/'"
 general_handlers = collections.OrderedDict()
 commands = collections.OrderedDict()
 bus = None
+
+logger = logging.getLogger('cmd')
 
 def register_handler(name, usage=None, protocol=None, dependency=None, enabled=True):
     def wrapper(func):

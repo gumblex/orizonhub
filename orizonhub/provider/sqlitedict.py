@@ -345,15 +345,15 @@ class SqliteMultithread(Thread):
                     # namespace contains the original outer stack location.
                     self.log.error('Inner exception:')
                     for item in traceback.format_list(inner_stack):
-                        self.log.error(item)
+                        self.log.error(item.rstrip('\n'))
                     self.log.error('')  # deliniate traceback & exception w/blank line
                     for item in traceback.format_exception_only(e_type, e_value):
-                        self.log.error(item)
+                        self.log.error(item.rstrip('\n'))
 
                     self.log.error('')  # exception & outer stack w/blank line
                     self.log.error('Outer stack:')
                     for item in traceback.format_list(outer_stack):
-                        self.log.error(item)
+                        self.log.error(item.rstrip('\n'))
                     self.log.error('Exception will be re-raised at next call.')
 
                 if res:
