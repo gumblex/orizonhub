@@ -124,11 +124,11 @@ class IRCProtocol(Protocol):
         if protocol != 'irc' or msg.protocol in self.proxies:
             return
         if msg.fwd_src:
-            text = 'Fwd %s: %s' % (smartname(msg.fwd_src), msg.text)
+            text = '[%s] Fwd %s: %s' % (smartname(msg.src), smartname(msg.fwd_src), msg.text)
         elif msg.reply:
-            text = '%s: %s' % (smartname(msg.reply.src), msg.text)
+            text = '[%s] %s: %s' % (smartname(msg.src), smartname(msg.reply.src), msg.text)
         else:
-            text = msg.text
+            text = '[%s] %s' % (smartname(msg.src), msg.text)
         lines = self.longtext(text, msg.media and msg.media.get('action'))
         for l in lines:
             self.say(l)
