@@ -84,8 +84,10 @@ Response = collections.namedtuple('Response', (
     #     from the user.
     # 'media' field:
     #  -> {}: Media type specified options
-    #   - 'file': local path
-    #   - other: fields in Telegram Bot API
+    #   - '_file': local path
+    #   - 'caption', 'duration', 'performer', 'title', 'width', 'height',
+    #     'latitude', 'longitude': media specified options in Telegram Bot API
+    # 'alttext' field -> str: alternative text, for media types
     'reply' # Replied message: Message
 ))
 

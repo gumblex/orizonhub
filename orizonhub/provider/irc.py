@@ -3,16 +3,17 @@
 
 import re
 import time
+import queue
 import logging
 
 from ..utils import smartname
 from ..model import Protocol, Message, User, UserType
 from .libirc import IRCConnection
 
+logger = logging.getLogger('irc')
+
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
-
-logger = logging.getLogger('irc')
 
 class IRCProtocol(Protocol):
     def __init__(self, config, bus):
@@ -23,6 +24,8 @@ class IRCProtocol(Protocol):
         self.run = True
         # self.rate: max interval
         self.rate = 1/2
+        self.poll_rate = 0.2
+        self.send_q = queue.Queue()
         self.last_sent = 0
         self.identity = User(None, 'irc', UserType.user, None, self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
@@ -54,6 +57,7 @@ class IRCProtocol(Protocol):
     def start_polling(self):
         while self.run:
             self.checkircconn()
+            last_sent = 0
             line = self.ircconn.parse(block=False)
             mtime = int(time.time())
             #logger.debug('IRC: %s', line)
@@ -98,7 +102,18 @@ class IRCProtocol(Protocol):
                     protocol, None, src, dest, text, media, mtime,
                     None, None, None, mtype, None if alttext == text else alttext
                 ))
-            time.sleep(.2)
+            wait = self.rate - time.perf_counter() + last_sent
+            if wait > self.poll_rate:
+                time.sleep(self.poll_rate)
+            else:
+                try:
+                    args = self.send_q.get_nowait()
+                    if wait > 0:
+                        time.sleep(wait)
+                    self.ircconn.say(*args)
+                    last_sent = time.perf_counter()
+                except queue.Empty:
+                    time.sleep(self.poll_rate)
 
     def send(self, response, protocol):
         # -> Message
@@ -128,7 +143,7 @@ class IRCProtocol(Protocol):
         elif msg.reply:
             text = '[%s] %s: %s' % (smartname(msg.src), smartname(msg.reply.src), msg.text)
         else:
-            text = '[%s] %s' % (smartname(msg.src), msg.text)
+            text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)
         lines = self.longtext(text, msg.media and msg.media.get('action'))
         for l in lines:
             self.say(l)
@@ -158,11 +173,7 @@ class IRCProtocol(Protocol):
         return lines
 
     def say(self, line, dest=None):
-        wait = self.rate - time.perf_counter() + self.last_sent
-        if wait > 0:
-            time.sleep(wait)
-        self.ircconn.say(dest or self.cfg.channel, line)
-        self.last_sent = time.perf_counter()
+        self.send_q.put((dest or self.cfg.channel, line))
 
     @staticmethod
     def _line_wrap(lines, max_length):
