@@ -92,10 +92,10 @@ Response = collections.namedtuple('Response', (
 ))
 
 class Logger:
-    def log(self, msg):
+    def log(self, msg: Message):
         pass
 
-    def update_user(self, user):
+    def update_user(self, user: User):
         pass
 
     def commit(self):
@@ -112,15 +112,13 @@ class Protocol:
     def start_polling(self):
         pass
 
-    def send(self, response, protocol):
-        # -> Message
+    def send(self, response: Response, protocol: str) -> Message:
         pass
 
-    def forward(self, msg, protocol):
-        # -> Message
+    def forward(self, msg: Message, protocol: str) -> Message:
         pass
 
-    def status(self, dest, action):
+    def status(self, dest: User, action: str):
         '''
         Protocol-specified status.
         Telegram Bot API:

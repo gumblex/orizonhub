@@ -7,7 +7,7 @@ import queue
 import logging
 
 from ..utils import smartname
-from ..model import Protocol, Message, User, UserType
+from ..model import Protocol, Message, User, UserType, Response
 from .libirc import IRCConnection
 
 logger = logging.getLogger('irc')
@@ -115,8 +115,7 @@ class IRCProtocol(Protocol):
                 except queue.Empty:
                     time.sleep(self.poll_rate)
 
-    def send(self, response, protocol):
-        # -> Message
+    def send(self, response: Response, protocol: str) -> Message:
         # sending to proxies is not supported
         if protocol != 'irc':
             return
@@ -133,8 +132,7 @@ class IRCProtocol(Protocol):
             response.reply.mtype, response.text
         )
 
-    def forward(self, msg, protocol):
-        # -> Message
+    def forward(self, msg: Message, protocol: str) -> Message:
         # `protocol` is ignored
         if protocol != 'irc' or msg.protocol in self.proxies:
             return

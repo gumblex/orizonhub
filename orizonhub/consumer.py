@@ -7,7 +7,7 @@ import concurrent.futures
 
 import pytz
 
-from .model import Request, Response
+from .model import Message, User, Request, Response
 from .provider import command
 
 logger = logging.getLogger('handler')
@@ -70,7 +70,7 @@ class MessageHandler:
                 return r
         return self.executor.submit(_do_process, msg, respond)
 
-    def status(self, dest, action):
+    def status(self, dest: User, action: str):
         for n, p in self.protocols.items():
             self.submit_task(p.status, dest, action)
 
@@ -82,7 +82,7 @@ class MessageHandler:
         for n, l in self.loggers.items():
             self.submit_task(l.log, msg)
 
-    def parse_cmd(self, text):
+    def parse_cmd(self, text: str):
         t = text.strip().replace('\xa0', ' ').split(' ', 1)
         if not t:
             return None
@@ -94,7 +94,7 @@ class MessageHandler:
         expr = t[1] if len(t) > 1 else ''
         return Request(cmd[0][1:], expr, {})
 
-    def dispatch(self, req, msg=None):
+    def dispatch(self, req: Request, msg=None):
         c = command.commands.get(req.cmd)
         logger.debug('command: %s', c)
         if not (c is None
@@ -114,7 +114,7 @@ class MessageHandler:
                     r = Response(r, None, msg)
                 return r
 
-    def dispatch_gh(self, msg):
+    def dispatch_gh(self, msg: Message):
         '''
         Dispatch general handlers. Only return the first answer.
         '''

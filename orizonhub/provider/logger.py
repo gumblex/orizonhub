@@ -25,7 +25,7 @@ class TextLogger(Logger):
         self.loghandler.setFormatter(logging.Formatter('%(message)s'))
         self.tz = tz
 
-    def log(self, msg):
+    def log(self, msg: Message):
         d = msg._asdict()
         d['asctime'] = datetime.fromtimestamp(msg.time, self.tz).strftime('%Y-%m-%d %H:%M:%S')
         d['srcname'] = msg.src.alias
@@ -75,7 +75,7 @@ class SQLiteLogger(Logger):
             u = User._make(row)
             self.user_cache[u.id] = self.user_cache[u._key()] = u
 
-    def log(self, msg):
+    def log(self, msg: Message):
         assert msg.mtype == 'group'
         self.update_user(msg.chat)
         src = self.update_user(msg.src).id
@@ -88,7 +88,7 @@ class SQLiteLogger(Logger):
         except sqlite3.IntegrityError:
             logger.warning('Conflict message: %s', msg)
 
-    def update_user(self, user):
+    def update_user(self, user: User):
         '''
         Update user in database if necessary, returns a User with `id` set.
 
@@ -130,7 +130,7 @@ class SQLiteLogger(Logger):
             _update_user(uk, user)
         return ret
 
-    def getuser(self, uid):
+    def getuser(self, uid: int):
         try:
             return self.user_cache[uid]
         except KeyError:
@@ -139,7 +139,7 @@ class SQLiteLogger(Logger):
             self.user_cache[u.id] = self.user_cache[u._key()] = u
             return u
 
-    def getmsg(self, mid):
+    def getmsg(self, mid: int):
         res = self.msg_cache.get(mid)
         if res:
             return res

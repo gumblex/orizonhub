@@ -8,7 +8,7 @@ import time
 import logging
 
 from ..utils import timestring_a, smartname, fwd_to_text
-from ..model import __version__, Protocol, Message, User, UserType
+from ..model import __version__, Protocol, Message, User, UserType, Response
 
 import requests
 
@@ -107,7 +107,7 @@ class TelegramBotProtocol(Protocol):
                         self.bus.post(self._make_message(upd['message']))
             time.sleep(.2)
 
-    def send(self, response, protocol):
+    def send(self, response: Response, protocol: str) -> Message:
         # -> Message
         rinfo = response.info or {}
         kwargs = rinfo.get('telegrambot', {})
@@ -133,7 +133,7 @@ class TelegramBotProtocol(Protocol):
                         from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid,
                         disable_notification=kwargs.get('disable_notification'))
                     return self._make_message(m)
-                except BotAPIFailed as ex:
+                except BotAPIFailed:
                     pass
             text = fwd_to_text(fmsgs, self.bus.timezone)
         elif rtype in ('photo', 'audio', 'document', 'sticker', 'video', 'voice'):
@@ -155,14 +155,13 @@ class TelegramBotProtocol(Protocol):
         m = self.sendmsg(text, chat_id, **kwargs)
         return self._make_message(m)
 
-    def forward(self, msg, protocol):
-        # -> Message
+    def forward(self, msg: Message, protocol: str) -> Message:
         if protocol.startswith('telegram'):
             try:
                 m = self.bot_api('forwardMessage', chat_id=self.dest.pid,
                     from_chat_id=msg.chat.id, message_id=msg.pid)
                 return self._make_message(m)
-            except BotAPIFailed as ex:
+            except BotAPIFailed:
                 pass
         ...
 
