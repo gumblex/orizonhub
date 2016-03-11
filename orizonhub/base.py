@@ -35,11 +35,12 @@ class BotInstance:
         for k, v in self.config.loggers.items():
             try:
                 self.loggers[k] = provider.loggers[k](v, self.timezone)
-                logging.info('Registered logging: ' + k)
+                logging.info('Registered logger: ' + k)
             except KeyError:
-                raise ValueError('unrecognized logging: ' + k)
+                raise ValueError('unrecognized logger: ' + k)
         if self.config.status == ':SQLite3:':
-            self.bus.state = provider.SQLiteStateStore(self.loggers['sqlite'].conn)
+            self.bus.state = provider.SQLiteStateStore(self.loggers['sqlite'].conn,
+                            self.loggers['sqlite'].lock)
         else:
             self.bus.state = provider.BasicStateStore(self.config.status)
         for k, v in self.config.protocols.items():

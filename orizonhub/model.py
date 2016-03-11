@@ -33,14 +33,14 @@ class User(collections.namedtuple('User', (
         'type',       # Protocol-specified type: UserType
         # Telegram:      user, group (contains 'supergroup'), channel
         # IRC and other: user, group
-        'pid',        # Protocol-specified message id: int or None
-        'username',   # Protocol-specified username: str or None
+        'pid',        # Protocol-specified message id: int or None/0
+        'username',   # Protocol-specified username: str or None/''
         'first_name', # Protocol-specified first name or full name: str or None
         'last_name',  # Protocol-specified last name: str or None
         'alias'       # Canonical name alias: str or None
     ))):
     def _key(self):
-        return (self.protocol, self.type, self.pid, self.username)
+        return (self.protocol, int(self.type), self.pid or 0, self.username or '')
 
 class UserType(enum.IntEnum):
     user = 1
@@ -88,9 +88,6 @@ Response = collections.namedtuple('Response', (
 
 class Logger:
     def log(self, msg: Message):
-        pass
-
-    def update_user(self, user: User):
         pass
 
     def commit(self):
