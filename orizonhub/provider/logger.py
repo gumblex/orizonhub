@@ -60,7 +60,8 @@ class SQLiteLogger(Logger):
             'username TEXT,'
             'first_name TEXT,'
             'last_name TEXT,'
-            'alias TEXT'
+            'alias TEXT,'
+            'UNIQUE (protocol, type, pid, username)'
         ')',
     )
 
@@ -72,7 +73,9 @@ class SQLiteLogger(Logger):
         self.msg_cache = LRUCache(50)
         self.user_cache = {}
         for row in self.conn.select('SELECT * FROM users'):
-            u = User._make(row)
+            uid, protocol, utype, pid, username, first_name, last_name, alias = row
+            u = User(uid, protocol, utype, pid or None, username or None,
+                     first_name, last_name, alias)
             self.user_cache[u.id] = self.user_cache[u._key()] = u
 
     def log(self, msg: Message):
@@ -81,9 +84,9 @@ class SQLiteLogger(Logger):
         src = self.update_user(msg.src).id
         dest = self.update_user(msg.chat).id
         fwd_src = self.update_user(msg.fwd_src).id if msg.fwd_src else None
-        res = self.conn.change_one('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id) VALUES (?,?,?,?,?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_date, msg.reply and msg.reply.pid))
+        res = self.conn.change_one('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_time, reply_id) VALUES (?,?,?,?,?, ?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_time, msg.reply and msg.reply.pid))
         try:
-            self.conn.check_raise_error()
+            self.conn.commit(True)
             self.msg_cache[res[1]] = msg
         except sqlite3.IntegrityError:
             logger.warning('Conflict message: %s', msg)
@@ -98,18 +101,24 @@ class SQLiteLogger(Logger):
         Unknown    Get ID & Check   Check, Update/New
         '''
         def _get_user_id(uk):
-            res = self.conn.select_one('SELECT id FROM users WHERE %s=? AND %s=?' % uk._fields, uk)
+            res = self.conn.select_one('SELECT id FROM users WHERE protocol=? AND type=? AND pid=? AND username=?', uk)
             if res:
                 return res[0]
 
         def _update_user(uk, user):
-            self.conn.execute('UPDATE users SET protocol=?, username=?, first_name=?, last_name=?, alias=? WHERE id=?', (user.protocol, user.username, user.first_name, user.last_name, user.alias, user.id))
+            self.conn.execute('UPDATE users SET protocol=?, username=?, first_name=?, last_name=?, alias=? WHERE id=?', (user.protocol, user.username or '', user.first_name, user.last_name, user.alias, user.id))
             self.user_cache[user.id] = self.user_cache[uk] = user
 
         def _new_user(uk, user):
-            res = self.conn.change_one('INSERT INTO users (protocol, type, pid, username, first_name, last_name, alias) VALUES (?,?,?,?,?,?,?)', user[1:])
-            self.user_cache[res[1]] = self.user_cache[uk] = User(res[1], *user[1:])
-            return self.user_cache[uk]
+            res = self.conn.change_one('INSERT OR IGNORE INTO users (protocol, type, pid, username, first_name, last_name, alias) VALUES (?,?,?,?,?,?,?)', (user.protocol, user.type, user.pid or 0, user.username or '', user.first_name, user.last_name, user.alias))
+            try:
+                self.conn.check_raise_error()
+                uid = res[1]
+            except sqlite3.IntegrityError:
+                logger.warning('Conflict user: %s', user)
+                uid = _get_user_id(uk)
+            self.user_cache[uid] = self.user_cache[uk] = User(uid, *user[1:])
+            return self.user_cache[uid]
 
         uk = user._key()
         cached = self.user_cache.get(uk)
@@ -143,14 +152,14 @@ class SQLiteLogger(Logger):
         res = self.msg_cache.get(mid)
         if res:
             return res
-        res = self.conn.select_one('SELECT protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id FROM messages WHERE id = ?', (mid,))
+        res = self.conn.select_one('SELECT protocol, pid, src, dest, text, media, time, fwd_src, fwd_time, reply_id FROM messages WHERE id = ?', (mid,))
         if res is None:
             return None
-        protocol, pid, src, dest, text, media, time, fwd_src, fwd_date, reply_id = res
+        protocol, pid, src, dest, text, media, time, fwd_src, fwd_time, reply_id = res
         msg = Message(
             mid, protocol, pid, self.getuser(src), self.getuser(dest), text,
             media and json.loads(media), time, fwd_src and self.getuser(fwd_src),
-            fwd_date, reply_id and self.getmsg(reply_id)
+            fwd_time, reply_id and self.getmsg(reply_id)
         )
         self.msg_cache[mid] = msg
         return msg
@@ -189,7 +198,7 @@ class SQLiteStateStore(BasicStateStore):
         super(BasicStateStore, self).__init__(data)
 
     def commit(self):
-        for k, v in self.data:
+        for k, v in self.data.items():
             self.conn.execute('REPLACE INTO state (key, value) VALUES (?,?)', (k, json.dumps(v)))
         self.conn.commit()
 

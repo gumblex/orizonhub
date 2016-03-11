@@ -15,40 +15,49 @@ import requests
 logger = logging.getLogger('tgbot')
 
 re_ircfmt = re.compile('([\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?)')
-re_mdescape = re.sub(r'([\[\*_])')
+re_mdescape = re.compile(r'([\[\*_])')
 mdescape = lambda s: re_mdescape.sub(r'\\\1', s)
 
 def ircfmt2tgmd(s):
     '''
-    Convert IRC format code to Telegram Bot API style Markdown.
-    *bold text*
-    _italic text_
-    [text](URL)
-    `inline fixed-width code`
-    ```pre-formatted fixed-width code block```
+    Convert IRC format code to Telegram Bot API style Markdown below:
+        *bold text*
+        _italic text_
+        [text](URL)
+        `inline fixed-width code`
+        ```pre-formatted fixed-width code block```
     '''
-    table = ('\x02\x1D\x1F\x16', '*__*')
+    table = ('\x02\x16\x1D\x1F\x03', '**__*')
+    # bold, reverse, italics, underline, color
+    state = [False]*5
     code = ''
+    ret = []
     for chunk in re_ircfmt.split(s):
         if not chunk:
             pass
-        elif chunk in table[0]:
-            if chunk == code:
-                ...
-        elif chunk in '\x1D\x1F':
-            # italic, underlined
-            if code == '_':
-                yield code
-                code = ''
+        elif chunk[0] in table[0]:
+            idx = table[0].index(chunk[0])
+            if chunk[0] == '\x03':
+                state[idx] = bool(chunk[1:])
             else:
-                yield code + '_'
-                code = '_'
-        elif chunk in '\x02\x16':
-            # bold, reverse
-            if code == '*':
-                yield code
-                code = ''
-        ...
+                state[idx] = not state[idx]
+            newcode = ''
+            for k, v in enumerate(state):
+                if v:
+                    newcode = table[1][k]
+                    break
+            if code != newcode:
+                ret.append(code + newcode)
+                code = newcode
+        elif chunk[0] == '\x0F':
+            state = [False]*5
+            ret.append(code)
+            code = ''
+        else:
+            ret.append(mdescape(chunk))
+    if code:
+        ret.append(code)
+    return ''.join(ret)
 
 class BotAPIFailed(Exception):
     pass
@@ -108,7 +117,6 @@ class TelegramBotProtocol(Protocol):
             time.sleep(.2)
 
     def send(self, response: Response, protocol: str) -> Message:
-        # -> Message
         rinfo = response.info or {}
         kwargs = rinfo.get('telegrambot', {})
         kwargs.update(rinfo.get('media', {}))
@@ -163,7 +171,20 @@ class TelegramBotProtocol(Protocol):
                 return self._make_message(m)
             except BotAPIFailed:
                 pass
-        ...
+        if msg.fwd_src:
+            text = '[%s] Fwd %s: %s' % (smartname(msg.src), smartname(msg.fwd_src), msg.text)
+        elif msg.reply:
+            text = '[%s] %s: %s' % (smartname(msg.src), smartname(msg.reply.src), msg.text)
+        else:
+            text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)
+        if re_ircfmt.search(text):
+            text = ircfmt2tgmd(text)
+            parse_mode = 'Markdown'
+        else:
+            parse_mode = None
+        m = self.bot_api('sendMessage', chat_id=self.dest.pid, text=text,
+            parse_mode=parse_mode)
+        return self._make_message(m)
 
     def status(self, dest, action):
         return self.bot_api('sendChatAction', chat_id=dest.pid, action=action)
@@ -176,6 +197,7 @@ class TelegramBotProtocol(Protocol):
         if wait > 0:
             time.sleep(wait)
         att = 1
+        ret = None
         while att <= self.attempts and self.run:
             try:
                 req = self.hsession.post(self.url + method, params=params,
@@ -191,7 +213,9 @@ class TelegramBotProtocol(Protocol):
                     raise ex
             att += 1
         self.last_sent = time.perf_counter()
-        if not ret['ok']:
+        if ret is None:
+            raise BotAPIFailed('attempt = %s, self.run = %s', att, self.run)
+        elif not ret['ok']:
             raise BotAPIFailed(str(ret))
         return ret['result']
 

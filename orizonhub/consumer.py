@@ -8,6 +8,7 @@ import concurrent.futures
 import pytz
 
 from .model import Message, User, Request, Response
+from .utils import nt_repr
 from .provider import command
 
 logger = logging.getLogger('handler')
@@ -25,7 +26,8 @@ class MessageHandler:
                           if 'username' in p]
 
     def process(self, msg):
-        logger.debug(msg)
+        #logger.debug(nt_repr(msg))
+        logger.debug('Message: ' + msg.text)
         if isinstance(msg, Request):
             return self.dispatch(msg)
         else:

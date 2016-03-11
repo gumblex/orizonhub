@@ -5,6 +5,7 @@ import re
 import time
 import queue
 import logging
+import threading
 
 from ..utils import smartname
 from ..model import Protocol, Message, User, UserType, Response
@@ -15,6 +16,8 @@ logger = logging.getLogger('irc')
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 
+md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
+
 class IRCProtocol(Protocol):
     def __init__(self, config, bus):
         self.config = config
@@ -22,10 +25,10 @@ class IRCProtocol(Protocol):
         self.bus = bus
         self.ircconn = None
         self.run = True
+        self.ready = threading.Event()
         # self.rate: max interval
         self.rate = 1/2
         self.poll_rate = 0.2
-        self.send_q = queue.Queue()
         self.last_sent = 0
         self.identity = User(None, 'irc', UserType.user, None, self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
@@ -45,6 +48,7 @@ class IRCProtocol(Protocol):
     def checkircconn(self):
         if self.ircconn and self.ircconn.sock:
             return
+        self.ready.clear()
         self.ircconn = IRCConnection()
         self.ircconn.connect((self.cfg.server, self.cfg.port), use_ssl=self.cfg.ssl)
         if self.cfg.get('password'):
@@ -57,7 +61,6 @@ class IRCProtocol(Protocol):
     def start_polling(self):
         while self.run:
             self.checkircconn()
-            last_sent = 0
             line = self.ircconn.parse(block=False)
             mtime = int(time.time())
             #logger.debug('IRC: %s', line)
@@ -65,6 +68,7 @@ class IRCProtocol(Protocol):
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
                 logger.info('I joined IRC channel: %s' % line['dest'])
+                self.ready.set()
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
                 if self.cfg.ignore and re.match(self.cfg.ignore, line["nick"]):
@@ -102,24 +106,16 @@ class IRCProtocol(Protocol):
                     protocol, None, src, dest, text, media, mtime,
                     None, None, None, mtype, None if alttext == text else alttext
                 ))
-            wait = self.rate - time.perf_counter() + last_sent
-            if wait > self.poll_rate:
-                time.sleep(self.poll_rate)
-            else:
-                try:
-                    args = self.send_q.get_nowait()
-                    if wait > 0:
-                        time.sleep(wait)
-                    self.ircconn.say(*args)
-                    last_sent = time.perf_counter()
-                except queue.Empty:
-                    time.sleep(self.poll_rate)
+            time.sleep(self.poll_rate)
 
     def send(self, response: Response, protocol: str) -> Message:
         # sending to proxies is not supported
         if protocol != 'irc':
             return
-        lines = response.text.splitlines()
+        if (response.info or {}).get('type') == 'markdown':
+            lines = md2ircfmt(response.text).splitlines()
+        else:
+            lines = response.text.splitlines()
         text = smartname(response.reply.src) + ': '
         if len(lines) < 3:
             text += ' '.join(lines)
@@ -171,7 +167,12 @@ class IRCProtocol(Protocol):
         return lines
 
     def say(self, line, dest=None):
-        self.send_q.put((dest or self.cfg.channel, line))
+        self.ready.wait()
+        wait = self.rate - time.perf_counter() + self.last_sent
+        if wait > 0:
+            time.sleep(wait)
+        self.ircconn.say(dest or self.cfg.channel, line)
+        self.last_sent = time.perf_counter()
 
     @staticmethod
     def _line_wrap(lines, max_length):

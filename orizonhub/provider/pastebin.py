@@ -26,6 +26,8 @@ class BasePasteBin:
     def __init__(self, cachepath, maxsize):
         self.cachepath = cachepath
         self.maxsize = maxsize
+        if not os.path.isdir(self.cachepath):
+            os.makedirs(self.cachepath)
 
     def geturl(self, filename):
         raise NotImplementedError
@@ -105,12 +107,15 @@ class SimplePasteBin(BasePasteBin):
         self.maxsize = maxsize
         self.baseurl = baseurl
         self.expire = expire
+        if not os.path.isdir(self.cachepath):
+            os.makedirs(self.cachepath)
 
     def geturl(self, filename):
-        fpath = os.path.join(self.baseurl, filename)
+        url = os.path.join(self.baseurl, filename)
+        fpath = os.path.join(self.cachepath, filename)
         if not os.path.isfile(fpath):
             raise FileNotFoundError(fpath)
-        return fpath
+        return url
 
     def close(self):
         for f in os.listdir(self.cachepath):

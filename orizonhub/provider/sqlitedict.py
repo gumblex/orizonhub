@@ -343,18 +343,20 @@ class SqliteMultithread(Thread):
                     # it may be confusing to see an exception for an unrelated
                     # statement, an ERROR log statement from the 'sqlitedict.*'
                     # namespace contains the original outer stack location.
-                    self.log.error('Inner exception:')
+                    errinfo = []
+                    errinfo.append('Inner exception:')
                     for item in traceback.format_list(inner_stack):
-                        self.log.error(item.rstrip('\n'))
-                    self.log.error('')  # deliniate traceback & exception w/blank line
+                        errinfo.append(item.rstrip('\n'))
+                    #errinfo.append('')  # deliniate traceback & exception w/blank line
                     for item in traceback.format_exception_only(e_type, e_value):
-                        self.log.error(item.rstrip('\n'))
+                        errinfo.append(item.rstrip('\n'))
 
-                    self.log.error('')  # exception & outer stack w/blank line
-                    self.log.error('Outer stack:')
+                    errinfo.append('')  # exception & outer stack w/blank line
+                    errinfo.append('Outer stack:')
                     for item in traceback.format_list(outer_stack):
-                        self.log.error(item.rstrip('\n'))
-                    self.log.error('Exception will be re-raised at next call.')
+                        errinfo.append(item.rstrip('\n'))
+                    errinfo.append('Exception will be re-raised at next call.')
+                    self.log.error('\n'.join(errinfo))
 
                 if res:
                     for rec in cursor:

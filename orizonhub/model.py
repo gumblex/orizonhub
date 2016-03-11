@@ -39,13 +39,8 @@ class User(collections.namedtuple('User', (
         'last_name',  # Protocol-specified last name: str or None
         'alias'       # Canonical name alias: str or None
     ))):
-    UnameKey = collections.namedtuple('UnameKey', ('protocol', 'username'))
-    PidKey = collections.namedtuple('PidKey', ('protocol', 'pid'))
     def _key(self):
-        if self.pid is None:
-            return self.UnameKey(self.protocol, self.username)
-        else:
-            return self.PidKey(self.protocol, self.pid)
+        return (self.protocol, self.type, self.pid, self.username)
 
 class UserType(enum.IntEnum):
     user = 1
