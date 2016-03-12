@@ -286,7 +286,6 @@ class IRCConnection:
                     e.errno = errno.ENOTSOCK
                     raise e
                 try:
-                    received = b''
                     if block:
                         received = self.sock.recv(self.buffer_length)
                     else:
@@ -298,12 +297,6 @@ class IRCConnection:
                             else:
                                 received = self.sock.recv(
                                     self.buffer_length, socket.MSG_DONTWAIT)
-                        except ssl.SSLWantReadError:
-                            select.select([self.sock], [], [])
-                            received = self.sock.recv(self.buffer_length)
-                        except ssl.SSLWantWriteError:
-                            select.select([], [self.sock], [])
-                            received = self.sock.recv(self.buffer_length)
                         finally:
                             self.sock.settimeout(oldtimeout)
                             del oldtimeout
@@ -312,6 +305,9 @@ class IRCConnection:
                     else:
                         self.quit('Connection reset by peer.', wait=False)
                     return True
+                except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as e:
+                    # can be a subclass of socket.error
+                    return False
                 except socket.timeout as e:
                     try:
                         self.quit('Operation timed out.', wait=False)

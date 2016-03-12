@@ -61,17 +61,14 @@ class IRCProtocol(Protocol):
     def start_polling(self):
         last_sent = 0
         while self.run:
-            logger.debug('Loop.')
             self.checkircconn()
             try:
-                logger.debug('Parse.')
                 line = self.ircconn.parse(block=False)
-                logger.debug('Parsed.')
             except Exception:
-                logger.warning('Failed to poll from IRC.')
+                logger.exception('Failed to poll from IRC.')
                 continue
             mtime = int(time.time())
-            #logger.debug('IRC: %s', line)
+            logger.debug('IRC: %s', line)
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
@@ -115,25 +112,17 @@ class IRCProtocol(Protocol):
                     None, None, None, mtype, None if alttext == text else alttext
                 ))
             wait = self.rate - time.perf_counter() + last_sent
-            logger.debug((wait, last_sent, self.ready))
             if wait > self.poll_rate or not self.ready:
-                logger.debug((wait > self.poll_rate, self.ready))
                 time.sleep(self.poll_rate)
-                logger.debug('Waited: %s' % self.poll_rate)
             else:
                 try:
                     args = self.send_q.get_nowait()
-                    logger.debug((wait, last_sent, self.ready, args))
                     if wait > 0:
                         time.sleep(wait)
-                    logger.debug('Waited: %s' % wait)
                     self.checkircconn()
-                    logger.debug('Checked')
                     self.ircconn.say(*args)
                     last_sent = time.perf_counter()
-                    logger.debug('Said: %s', last_sent)
                 except queue.Empty:
-                    logger.debug('Empty')
                     time.sleep(self.poll_rate)
                 except Exception:
                     self.send_q.put(args)
