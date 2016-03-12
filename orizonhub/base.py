@@ -98,3 +98,6 @@ class MessageBus:
             return self.handler.providers[name]
         except KeyError:
             raise AttributeError("handler %r not found" % name)
+
+    def __contains__(self, item):
+        return item in self.handler.providers

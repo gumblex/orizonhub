@@ -15,6 +15,7 @@ logger = logging.getLogger('irc')
 
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
+re_ircforward = re.compile(r'^\[([^]]+)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
 
 md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
 
@@ -156,10 +157,23 @@ class IRCProtocol(Protocol):
             return
         prefix = '[%s] ' % smartname(msg.src)
         text = msg.alttext or msg.text
-        if msg.fwd_src:
-            prefix2 = 'Fwd %s: ' % smartname(msg.fwd_src)
-        elif msg.reply:
-            prefix2 = '%s: ' % smartname(msg.reply.src)
+        if msg.fwd_src or msg.reply:
+            if msg.fwd_src:
+                src = smartname(msg.fwd_src)
+                prefix2 = 'Fwd '
+            else:
+                src = smartname(msg.reply.src)
+                prefix2 = ''
+            if msg.reply.src.protocol == 'telegram' and (
+                'telegrambot' in self.bus and
+                self.bus.telegrambot.identity.pid == msg.reply.src.pid
+                or 'telegramcli' in self.bus and
+                self.bus.telegramcli.identity.pid == msg.reply.src.pid
+            ):
+                rnmatch = re_ircforward.match(msg.text)
+                if rnmatch:
+                    src = rnmatch.group(1) or src
+            prefix2 += src + ': '
         else:
             prefix2 = ''
         lines = self.longtext(text, prefix, prefix2, msg.media and msg.media.get('action'))

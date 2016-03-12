@@ -93,11 +93,11 @@ class TelegramBotProtocol(Protocol):
         self.attempts = 2
         self.last_sent = 0
         # updated later
-        self.identity = User(None, 'telegramcli', UserType.user,
+        self.identity = User(None, 'telegram', UserType.user,
                              int(self.cfg.token.split(':')[0]), self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
         # auto updated
-        self.dest = User(None, 'telegramcli', UserType.group, self.cfg.groupid,
+        self.dest = User(None, 'telegram', UserType.group, self.cfg.groupid,
                          None, config.group_name, None, config.group_name)
 
     def start_polling(self):
