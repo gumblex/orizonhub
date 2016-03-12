@@ -7,8 +7,8 @@ import json
 import time
 import logging
 
-from ..utils import timestring_a, smartname, fwd_to_text
-from ..model import __version__, Protocol, Message, User, UserType, Response
+from .utils import timestring_a, smartname, fwd_to_text
+from .model import __version__, Protocol, Message, User, UserType, Response
 
 import requests
 

@@ -69,5 +69,5 @@ target/
 # bot data
 config.py
 *.db
-*.json
 chatlog.txt
+orzimg/

@@ -7,8 +7,8 @@ import json
 import socketserver
 from multiprocessing.connection import Connection
 
-from ..utils import nt_from_dict
-from ..model import Message, Response, Protocol
+from .utils import nt_from_dict
+from .model import Message, Response, Protocol
 
 class RawSocketProtocol(Protocol):
     '''

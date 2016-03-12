@@ -7,9 +7,9 @@ import queue
 import logging
 import threading
 
-from ..utils import smartname
-from ..model import Protocol, Message, User, UserType, Response
-from .libirc import IRCConnection
+from .utils import smartname
+from .model import Protocol, Message, User, UserType, Response
+from .ext.libirc import IRCConnection
 
 logger = logging.getLogger('irc')
 

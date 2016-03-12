@@ -11,8 +11,8 @@ import collections
 from datetime import datetime
 from logging.handlers import WatchedFileHandler
 
-from ..utils import LRUCache, nt_repr
-from ..model import Message, User, Logger
+from .utils import LRUCache, nt_repr
+from .model import Message, User, Logger
 
 logger = logging.getLogger('logger')
 

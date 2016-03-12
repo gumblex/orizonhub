@@ -8,7 +8,7 @@ import logging
 import subprocess
 import collections
 
-from ..model import Command, Response as R
+from .model import Command, Response as R
 
 PREFIX = "/'"
 
@@ -81,7 +81,7 @@ def cmd_getmsg(expr, msg=None):
         mids = tuple(map(int, expr.split()))
     except Exception:
         if 'reply_to_message' in msg:
-            return 'Message ID: %d' % msg['reply_to_message']['message_id']
+            return 'Message ID: t%d' % msg['reply_to_message']['message_id']
         else:
             return 'Syntax error. Usage: ' + cmd_getmsg.__doc__
     if msg['protocal'] == 'tgbot':
@@ -530,7 +530,7 @@ def cmd_start(expr, msg=None):
 def cmd_cancel(expr, msg=None):
     if msg['protocal'] != 'tgbot':
         return NotImplemented
-    bot_api('sendMessage', chat_id=msg['chat']['id'], text='Cancelled.', reply_to_message_id=msg['message_id'], reply_markup='{"hide_keyboard": true}')
+    bus.telegrambot.bot_api('sendMessage', chat_id=msg['chat']['id'], text='Cancelled.', reply_to_message_id=msg['message_id'], reply_markup='{"hide_keyboard": true}')
 
 @register_command('hello', enabled=False)
 def cmd_hello(expr, msg=None):
@@ -538,8 +538,6 @@ def cmd_hello(expr, msg=None):
 
 @register_command('help')
 def cmd_help(expr, msg=None):
-    if msg['protocal'] != 'tgbot':
-        return NotImplemented
     if expr:
         if expr in self.cmds:
             h = self.cmds[expr].__doc__
