@@ -103,17 +103,20 @@ class TelegramBotProtocol(Protocol):
     def start_polling(self):
         self.identity = self._make_user(self.bot_api('getMe'))
         while self.run:
+            logger.debug('tgapi.offset: %s', self.bus.state.get('tgapi.offset', 0))
             try:
-                updates = self.bot_api('getUpdates', offset=self.bus.state.get('tgbot.offset', 0), timeout=10)
+                updates = self.bot_api('getUpdates', offset=self.bus.state.get('tgapi.offset', 0), timeout=10)
             except Exception:
                 logging.exception('TelegramBot: Get updates failed.')
                 continue
             if updates:
                 logging.debug('TelegramBot: messages coming.')
-                self.bus.state['tgapi.offset'] = updates[-1]["update_id"] + 1
+                maxupd = 0
                 for upd in updates:
+                    maxupd = max(maxupd, upd['update_id'])
                     if 'message' in upd:
                         self.bus.post(self._make_message(upd['message']))
+                self.bus.state['tgapi.offset'] = maxupd + 1
             time.sleep(.2)
 
     def send(self, response: Response, protocol: str) -> Message:

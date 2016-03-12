@@ -29,7 +29,7 @@ class IRCProtocol(Protocol):
         # self.rate: max interval
         self.rate = 1/2
         self.poll_rate = 0.2
-        self.send_q = queue.Queue()
+        self.send_q = queue.PriorityQueue()
         self.identity = User(None, 'irc', UserType.user, None, self.cfg.username,
                              config.bot_fullname, None, config.bot_nickname)
         self.dest = User(None, 'irc', UserType.group, None, self.cfg.channel,
@@ -41,9 +41,11 @@ class IRCProtocol(Protocol):
         # the trailing CR-LF. Thus, there are 510 characters maximum allowed
         # for the command and its parameters.
         # PRIVMSG %s :%s
-        self.line_length = 510 - 10
+        #self.line_length = 510 - 10
         # assume self.cfg.channel is ascii
-        self.line_length -= len(self.cfg.channel)
+        #self.line_length -= len(self.cfg.channel)
+        # for max compatibility
+        self.line_length = 420
 
     def checkircconn(self):
         if self.ircconn and self.ircconn.sock:
@@ -68,7 +70,7 @@ class IRCProtocol(Protocol):
                 logger.exception('Failed to poll from IRC.')
                 continue
             mtime = int(time.time())
-            logger.debug('IRC: %s', line)
+            #logger.debug('IRC: %s', line)
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
@@ -116,7 +118,7 @@ class IRCProtocol(Protocol):
                 time.sleep(self.poll_rate)
             else:
                 try:
-                    args = self.send_q.get_nowait()
+                    prio, args = self.send_q.get_nowait()
                     if wait > 0:
                         time.sleep(wait)
                     self.checkircconn()
@@ -125,7 +127,7 @@ class IRCProtocol(Protocol):
                 except queue.Empty:
                     time.sleep(self.poll_rate)
                 except Exception:
-                    self.send_q.put(args)
+                    self.send_q.put((prio, args))
                     logger.exception('Failed to send to IRC.')
 
     def send(self, response: Response, protocol: str) -> Message:
@@ -141,7 +143,7 @@ class IRCProtocol(Protocol):
             text += ' '.join(lines)
         else:
             text += lines[0] + ' […] ' + lines[-1]
-        self.say(text, response.reply.chat)
+        self.say(text, response.reply.chat, (0, time.time(), 1))
         return Message(
             None, 'irc', None, self.identity, response.reply.chat, text,
             None, int(time.time()), None, None, response.reply,
@@ -152,26 +154,28 @@ class IRCProtocol(Protocol):
         # `protocol` is ignored
         if protocol != 'irc' or msg.protocol in self.proxies:
             return
-        if msg.fwd_src:
-            prefix = '[%s] Fwd %s: ' % (smartname(msg.src), smartname(msg.fwd_src))
-        elif msg.reply:
-            prefix = '[%s] %s: ' % (smartname(msg.src), smartname(msg.reply.src))
-        else:
-            prefix = '[%s] ' % smartname(msg.src)
+        prefix = '[%s] ' % smartname(msg.src)
         text = msg.alttext or msg.text
-        lines = self.longtext(text, prefix, msg.media and msg.media.get('action'))
-        for l in lines:
-            self.say(l)
+        if msg.fwd_src:
+            prefix2 = 'Fwd %s: ' % smartname(msg.fwd_src)
+        elif msg.reply:
+            prefix2 = '%s: ' % smartname(msg.reply.src)
+        else:
+            prefix2 = ''
+        lines = self.longtext(text, prefix, prefix2, msg.media and msg.media.get('action'))
+        for k, l in enumerate(lines):
+            self.say(l, priority=(1, msg.time, k))
         return Message(
-            None, 'irc', None, self.identity, self.dest, '\n'.join(lines), msg.media,
-            int(time.time()), None, None, msg.reply, msg.mtype, msg.alttext
+            None, 'irc', None, self.identity, self.dest, '\n'.join(lines),
+            msg.media, int(time.time()), None, None, msg.reply, msg.mtype,
+            msg.alttext
         )
 
-    def longtext(self, text, prefix, action=False):
+    def longtext(self, text, prefix, prefix2='', action=False):
         line_length = self.line_length
         if action:
             line_length -= 9
-        lines = list(self._line_wrap((prefix + text).splitlines(), line_length))
+        lines = list(self._line_wrap((prefix2 + text).splitlines(), prefix, line_length))
         url = None
         if len(lines) > 3:
             try:
@@ -184,22 +188,31 @@ class IRCProtocol(Protocol):
                 lines = lines[:3]
                 lines[-1] += ' […]'
             else:
-                lines = [prefix + '<long text> ' + url]
+                return [prefix + prefix2 + '<long text> ' + url]
+        for k, l in enumerate(lines):
+            lines[k] = prefix + l
         return lines
 
-    def say(self, line, dest=None):
-        self.send_q.put((dest or self.cfg.channel, line))
+    def say(self, line, dest=None, priority=(0, 0, 1)):
+        # priority = (type, time, line)
+        self.send_q.put((priority, (dest or self.cfg.channel, line)))
 
     @staticmethod
-    def _line_wrap(lines, max_length):
+    def _line_wrap(lines, prefix, max_length):
+        '''
+        Algorithm to wrap long lines in IRC to avoid truncating.
+        `prefix` is inserted before each line, i.e. sender's name
+        '''
         for l in lines:
-            while len(l.encode('utf-8')) > max_length:
+            sendl = prefix + l
+            while len(sendl.encode('utf-8')) > max_length:
                 # max utf-8 byte length is 4
-                for ch in range(max_length//4, len(l)):
-                    if len(l[:ch].encode('utf-8')) > max_length:
+                for ch in range(max_length//4, len(sendl)):
+                    if len(sendl[:ch].encode('utf-8')) > max_length:
                         break
-                yield l[:ch-1]
-                l = l[ch-1:]
+                yield sendl[len(prefix):ch-1]
+                l = sendl[ch-1:]
+                sendl = prefix + l
             else:
                 if l:
                     yield l

@@ -84,8 +84,8 @@ class SQLiteLogger(Logger):
         assert msg.mtype == 'group'
         with self.lock:
             cur = self.conn.cursor()
-            src = self.update_user(msg.src, cur).id
             dest = self.update_user(msg.chat, cur).id
+            src = self.update_user(msg.src, cur).id
             fwd_src = self.update_user(msg.fwd_src, cur).id if msg.fwd_src else None
             try:
                 cur.execute('INSERT INTO messages (protocol, pid, src, dest, text, media, time, fwd_src, fwd_time, reply_id) VALUES (?,?,?,?,?, ?,?,?,?,?)', (msg.protocol, msg.pid, src, dest, msg.text, json.dumps(msg.media) if msg.media else None, msg.time, fwd_src, msg.fwd_time, msg.reply and msg.reply.pid))
@@ -174,11 +174,15 @@ class SQLiteLogger(Logger):
         return cur.execute(req, arg)
 
     def commit(self):
+        try:
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            # sqlite3.OperationalError: cannot commit - no transaction is active
+            pass
         logger.debug('db committed.')
-        self.conn.commit()
 
     def close(self):
-        self.conn.commit()
+        self.commit()
         self.conn.close()
 
 class BasicStateStore(collections.UserDict):

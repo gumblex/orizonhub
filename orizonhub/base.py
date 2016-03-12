@@ -88,6 +88,7 @@ class MessageBus:
         self.handler.status(dest, action)
 
     def close(self):
+        self.handler.close()
         if self.state:
             self.state.close()
         self.pastebin.close()

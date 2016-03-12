@@ -140,3 +140,6 @@ class MessageHandler:
             except Exception:
                 logger.exception('Async function failed.')
         return self.executor.submit(func_noerr, *args, **kwargs)
+
+    def close(self):
+        self.executor.shutdown()
