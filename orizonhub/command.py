@@ -8,13 +8,14 @@ import logging
 import subprocess
 import collections
 
-from .model import Command, Response as R
+from .model import Command, Response
 
 PREFIX = "/'"
 
 general_handlers = collections.OrderedDict()
 commands = collections.OrderedDict()
 bus = None
+config = None
 
 logger = logging.getLogger('cmd')
 
@@ -47,7 +48,11 @@ def ghd_blackgun(msg):
 
 @register_handler('welcome', protocol=('telegrambot',))
 def ghd_welcome(msg):
-    ...
+    usr = msg.media and msg.media.get('new_chat_participant')
+    if (config.command_config.get('welcome') and usr
+        and msg.chat.pid == bus.telegrambot.identity.pid):
+        ...
+        return '欢迎 %s 加入本群！' % dc_getufname(usr)
 
 @register_handler('private')
 def ghd_private(msg):
@@ -110,9 +115,9 @@ def cmd_quote(expr, msg=None):
     '''/quote Send a today's random message.'''
     #bus.status(msg.chat, 'typing')
     sec = daystart()
-    msg = conn.execute('SELECT id FROM messages WHERE date >= ? AND date < ? ORDER BY RANDOM() LIMIT 1', (sec, sec + 86400)).fetchone()
+    msg = bus.sqlite.select('SELECT id FROM messages WHERE date >= ? AND date < ? ORDER BY RANDOM() LIMIT 1', (sec, sec + 86400)).fetchone()
     if msg is None:
-        msg = conn.execute('SELECT id FROM messages ORDER BY RANDOM() LIMIT 1').fetchone()
+        msg = bus.sqlite.select('SELECT id FROM messages ORDER BY RANDOM() LIMIT 1').fetchone()
     #forwardmulti((msg[0]-1, msg[0], msg[0]+1), chatid, replyid)
     forward(msg[0], chatid, replyid)
 
@@ -154,9 +159,9 @@ def cmd_search(expr, msg=None):
         uid = db_getuidbyname(username)
     if uid is None:
         keyword = ' '.join(expr)
-        sqr = conn.execute("SELECT id, src, text, date FROM messages WHERE text LIKE ? ORDER BY date DESC LIMIT ? OFFSET ?", ('%' + keyword + '%', limit, offset)).fetchall()
+        sqr = bus.sqlite.select("SELECT id, src, text, date FROM messages WHERE text LIKE ? ORDER BY date DESC LIMIT ? OFFSET ?", ('%' + keyword + '%', limit, offset)).fetchall()
     else:
-        sqr = conn.execute("SELECT id, src, text, date FROM messages WHERE src = ? AND text LIKE ? ORDER BY date DESC LIMIT ? OFFSET ?", (uid, '%' + keyword + '%', limit, offset)).fetchall()
+        sqr = bus.sqlite.select("SELECT id, src, text, date FROM messages WHERE src = ? AND text LIKE ? ORDER BY date DESC LIMIT ? OFFSET ?", (uid, '%' + keyword + '%', limit, offset)).fetchall()
     result = []
     for mid, fr, text, date in sqr:
         text = ellipsisresult(text, keyword)
@@ -178,10 +183,10 @@ def cmd_mention(expr, msg=None):
     uid = msg['from']['id']
     user = db_getuser(uid)
     if user[0]:
-        res = conn.execute("SELECT * FROM messages WHERE (text LIKE ? OR reply_id IN (SELECT id FROM messages WHERE src = ?)) AND src != ? ORDER BY date DESC LIMIT 1", ('%@' + user[0] + '%', uid, CFG['botid'])).fetchone()
+        res = bus.sqlite.select("SELECT * FROM messages WHERE (text LIKE ? OR reply_id IN (SELECT id FROM messages WHERE src = ?)) AND src != ? ORDER BY date DESC LIMIT 1", ('%@' + user[0] + '%', uid, CFG['botid'])).fetchone()
         userat = '@' + user[0] + ' '
     else:
-        res = conn.execute("SELECT * FROM messages WHERE reply_id IN (SELECT id FROM messages WHERE src = ?) AND src != ? ORDER BY date DESC LIMIT 1", (uid, CFG['botid'])).fetchone()
+        res = bus.sqlite.select("SELECT * FROM messages WHERE reply_id IN (SELECT id FROM messages WHERE src = ?) AND src != ? ORDER BY date DESC LIMIT 1", (uid, CFG['botid'])).fetchone()
         userat = ''
     if res:
         reid = res[0]
@@ -234,7 +239,7 @@ def cmd_uinfo(expr, msg=None):
     uinfoln.append('ID: %s' % uid)
     result = [', '.join(uinfoln)]
     if msg['chat']['id'] == -CFG['groupid']:
-        r = conn.execute('SELECT src FROM messages WHERE date > ?', (time.time() - minutes * 60,)).fetchall()
+        r = bus.sqlite.select('SELECT src FROM messages WHERE date > ?', (time.time() - minutes * 60,)).fetchall()
         timestr = timestring(minutes)
         if r:
             ctr = collections.Counter(i[0] for i in r)
@@ -254,7 +259,7 @@ def cmd_stat(expr, msg=None):
         minutes = min(max(int(expr), 1), 3359733)
     except Exception:
         minutes = 1440
-    r = conn.execute('SELECT src FROM messages WHERE date > ?', (time.time() - minutes * 60,)).fetchall()
+    r = bus.sqlite.select('SELECT src FROM messages WHERE date > ?', (time.time() - minutes * 60,)).fetchall()
     timestr = timestring(minutes)
     if not r:
         return '在最近%s内无消息。' % timestr
@@ -382,7 +387,7 @@ def cmd_reply(expr, msg=None):
     text = ''
     if 'reply_to_message' in msg:
         text = msg['reply_to_message'].get('text', '')
-    text = (expr.strip() or text or ' '.join(t[0] for t in conn.execute("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
+    text = (expr.strip() or text or ' '.join(t[0] for t in bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
     runapptask('reply', (text,), (chatid, replyid))
 
 @register_command('do')
@@ -417,8 +422,8 @@ def cmd_do(expr, msg=None):
             return
         except KeyError:
             pass
-        if len(expr) == 1:
-            res = unicodedata.name(expr)
+        if len(expr) < 5:
+            res = ', '.join(unicodedata.name(ch) for ch in expr)
             return res
         else:
             return 'Something happened.'
@@ -497,7 +502,7 @@ revface = lambda x: min((abs(x-v), k) for k,v in enumerate(fstable))[1]
 @register_command('233')
 def cmd_233(expr, msg=None):
     try:
-        num = max(min(int(expr), 100), 1)
+        num = max(min(int(expr.split()[0]), 100), 1)
     except Exception:
         num = 1
     w = math.ceil(num ** .5)
@@ -506,14 +511,16 @@ def cmd_233(expr, msg=None):
     if rem:
         txt += '\n' + ''.join(srandom.choice('🌝🌚') for i in range(rem))
     wcount = txt.count('🌝')
+    wfi = facescore(wcount, num)
     if num > 9:
         txt += '\n' + '(🌝%d/🌚%d' % (wcount, num - wcount)
         if num > 41:
-            txt += ', 🌝%.2f%%' % facescore(wcount, num)
+            txt += ', 🌝%.2f%%' % wfi
         txt += ')'
-    return txt
+    return Response(txt, {'white': wcount, 'black': num - wcount, 
+                    'white_face_index': wfi}, msg)
 
-@register_command('fig')
+@register_command('fig', enabled=False)
 def cmd_fig(expr, msg=None):
     '''/fig <char> Make figure out of moon faces.'''
     if expr:
