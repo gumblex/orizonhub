@@ -4,6 +4,7 @@
 import os
 import io
 import json
+import collections
 import socketserver
 from multiprocessing.connection import Connection
 
@@ -24,7 +25,7 @@ class RawSocketProtocol(Protocol):
         self.bus = bus
         self.pastebin = bus.pastebin
         self.handlers = []
-        self.protocols = {}
+        self.protocols = collections.defaultdict(list)
         self.sockhdl = _request_handler(self.handlers, self.protocols, bus)
         address = config.protocols.socket.address
         if type(address) == tuple:
@@ -41,7 +42,8 @@ class RawSocketProtocol(Protocol):
 
     def forward(self, msg, protocol):
         if protocol in self.protocols:
-            self.protocols[protocol].send(msg)
+            for handler in self.protocols[protocol]:
+                handler.send(msg)
 
     def close(self):
         try:
@@ -67,7 +69,7 @@ def _request_handler(registry, protocols, bus):
                 except EOFError:
                     break
                 if obj['type'] == 'register':
-                    protocols[obj['protocol']] = self
+                    protocols[obj['protocol']].append(self)
                 elif obj.get('async', True):
                     bus.post(nt_from_dict(Message, obj['message'], None))
                     self.conn.send_bytes(json.dumps(True).encode('utf-8'))
