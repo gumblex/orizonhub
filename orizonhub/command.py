@@ -7,6 +7,7 @@ import random
 import logging
 import subprocess
 import collections
+import unicodedata
 
 from .model import Command, Response
 
@@ -48,11 +49,13 @@ def ghd_blackgun(msg):
 
 @register_handler('welcome', protocol=('telegrambot',))
 def ghd_welcome(msg):
-    usr = msg.media and msg.media.get('new_chat_participant')
-    if (config.command_config.get('welcome') and usr
+    user = msg.media and msg.media.get('new_chat_participant')
+    if (config.command_config.get('welcome') and user
         and msg.chat.pid == bus.telegrambot.identity.pid):
-        ...
-        return '欢迎 %s 加入本群！' % dc_getufname(usr)
+        uname = user['first_name']
+        if 'last_name' in user:
+            uname += ' ' + user['last_name']
+        return '欢迎 %s 加入本群！' % uname
 
 @register_handler('private')
 def ghd_private(msg):

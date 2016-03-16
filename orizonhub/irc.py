@@ -164,7 +164,7 @@ class IRCProtocol(Protocol):
             else:
                 src = smartname(msg.reply.src)
                 prefix2 = ''
-            if msg.reply.src.protocol == 'telegram' and (
+            if msg.reply and msg.reply.src.protocol == 'telegram' and (
                 'telegrambot' in self.bus and
                 self.bus.telegrambot.identity.pid == msg.reply.src.pid
                 or 'telegramcli' in self.bus and
