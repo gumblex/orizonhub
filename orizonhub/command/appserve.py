@@ -13,13 +13,13 @@ import subprocess
 import collections
 import concurrent.futures
 
-from ext import zhutil
-from ext import zhconv
-from ext import figchar
-from ext import simpcalc
-from ext import simpleime
-from ext import mosesproxy
-from ext import chinesename
+from ..ext import zhutil
+from ..ext import zhconv
+from ..ext import figchar
+from ..ext import simpcalc
+from ..ext import simpleime
+from ..ext import mosesproxy
+from ..ext import chinesename
 
 resource.setrlimit(resource.RLIMIT_RSS, (131072, 262144))
 

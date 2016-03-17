@@ -59,7 +59,7 @@ class IRCProtocol(Protocol):
         self.ircconn.setnick(self.cfg.username)
         self.ircconn.setuser(self.cfg.username, self.cfg.username)
         self.ircconn.join(self.cfg.channel)
-        logger.info('IRC (re)connected.')
+        logger.info('IRC connected.')
 
     def start_polling(self):
         last_sent = 0
@@ -139,7 +139,10 @@ class IRCProtocol(Protocol):
             lines = md2ircfmt(response.text).splitlines()
         else:
             lines = response.text.splitlines()
-        text = smartname(response.reply.src) + ': '
+        if response.reply.mtype == 'private':
+            text = ''
+        else:
+            text = smartname(response.reply.src) + ': '
         if len(lines) < 3:
             text += ' '.join(lines)
         else:
@@ -170,7 +173,7 @@ class IRCProtocol(Protocol):
                 or 'telegramcli' in self.bus and
                 self.bus.telegramcli.identity.pid == msg.reply.src.pid
             ):
-                rnmatch = re_ircforward.match(msg.text)
+                rnmatch = re_ircforward.match(msg.reply.text)
                 if rnmatch:
                     src = rnmatch.group(1) or src
             prefix2 += src + ': '

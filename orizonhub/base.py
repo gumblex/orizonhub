@@ -23,8 +23,7 @@ class BotInstance:
 
         self.bus = MessageBus(MessageHandler(config, self.protocols, self.loggers))
         self.bus.timezone = self.timezone
-        provider.command.bus = self.bus
-        provider.command.config = self.config
+        provider.command.activate(self.bus, self.config)
         logging.info('Bot instance initialized.')
 
     def start(self):
