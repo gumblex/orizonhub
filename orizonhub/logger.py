@@ -8,7 +8,7 @@ import sqlite3
 import logging
 import threading
 import collections
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.handlers import WatchedFileHandler
 
 from .utils import LRUCache, nt_repr
@@ -20,7 +20,7 @@ class TextLogger(Logger):
     '''Logs messages with plain text. Rotating-friendly.'''
     FORMAT = '%(asctime)s [%(protocol)s:%(pid)s] %(srcname)s >> %(text)s'
 
-    def __init__(self, filename, tz):
+    def __init__(self, filename, tz=timezone.utc):
         self.loghandler = WatchedFileHandler(filename, encoding='utf-8', delay=True)
         self.loghandler.setLevel(logging.INFO)
         self.loghandler.setFormatter(logging.Formatter('%(message)s'))
@@ -66,7 +66,7 @@ class SQLiteLogger(Logger):
         ')',
     )
 
-    def __init__(self, filename, tz):
+    def __init__(self, filename, tz=None):
         self.lock = threading.Lock()
         self.msg_cache = LRUCache(50)
         self.user_cache = {}
