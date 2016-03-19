@@ -3,9 +3,10 @@
 
 import math
 import random
+import collections
 import unicodedata
 
-from .support import cp
+from .support import cp, Response
 
 srandom = random.SystemRandom()
 facescore = lambda x,y: 1/2*math.erfc((0.5*y-x)/(2**0.5*(0.5*y**0.5)))*100

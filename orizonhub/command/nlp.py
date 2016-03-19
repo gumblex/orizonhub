@@ -73,13 +73,13 @@ def cmd_wyw(expr, msg=None):
     if not tinput:
         return 'Syntax error. Usage: ' + cmd_wyw.__doc__
         return
-    bus.status(msg.chat, 'typing')
+    cp.bus.status(msg.chat, 'typing')
     runapptask('wyw', (tinput, lang), (chatid, replyid))
 
 @cp.register_command('say')
 def cmd_say(expr, msg=None):
     '''/say Say something interesting.'''
-    #bus.status(msg.chat, 'typing')
+    #cp.bus.status(msg.chat, 'typing')
     if expr:
         runapptask('reply', (expr,), (chatid, replyid))
     else:
@@ -90,10 +90,10 @@ def cmd_reply(expr, msg=None):
     '''/reply [question] Reply to the conversation.'''
     if 'forward_from' in msg and msg['chat']['id'] < 0:
         return
-    bus.status(msg.chat, 'typing')
+    cp.bus.status(msg.chat, 'typing')
     text = ''
     if 'reply_to_message' in msg:
         text = msg['reply_to_message'].get('text', '')
-    text = (expr.strip() or text or ' '.join(t[0] for t in bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
+    text = (expr.strip() or text or ' '.join(t[0] for t in cp.bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
     runapptask('reply', (text,), (chatid, replyid))
 

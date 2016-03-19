@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .support import cp
+import re
+
+from .support import cp, Response
 
 @cp.register_command('m', dependency='sqlite')
 def cmd_getmsg(expr, msg=None):
