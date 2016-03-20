@@ -203,7 +203,7 @@ class TelegramBotProtocol(Protocol):
         ret = None
         while att <= self.attempts and self.run:
             try:
-                req = self.hsession.post(self.url + method, params=params,
+                req = self.hsession.post(self.url + method, data=params,
                                          files=input_file, timeout=45)
                 retjson = req.content
                 ret = json.loads(retjson.decode('utf-8'))
