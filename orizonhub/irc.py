@@ -240,6 +240,12 @@ class IRCProtocol(Protocol):
         return User(None, protocol, UserType.user, None,
                     nick, realname, None, nick.rstrip('_'))
 
+    @staticmethod
+    def colored_smartname(user, limit=20):
+        palette = (2, 3, 4, 5, 6, 7, 10, 12, 13)
+        color = user.id % len(palette)
+        return '\x03%02d%s\x03' % (palette[color], smartname(user, limit))
+
     def close(self):
         if self.run:
             self.run = False
