@@ -8,7 +8,7 @@ def cmd_calc(expr, msg=None):
     '''/calc <expr> Calculate <expr>.'''
     # Too many bugs
     if expr:
-        runapptask('calc', (expr,), (chatid, replyid))
+        cp.external('calc', expr)
     else:
         return 'Syntax error. Usage: ' + cmd_calc.__doc__
 
@@ -19,6 +19,6 @@ def cmd_py(expr, msg=None):
         if len(expr) > 1000:
             return 'Expression too long.'
         else:
-            runapptask('py', (expr,), (chatid, replyid))
+            cp.external('py', expr)
     else:
         return 'Syntax error. Usage: ' + cmd_py.__doc__

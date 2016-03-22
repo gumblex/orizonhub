@@ -8,6 +8,7 @@ PREFIX = "/'"
 commands = support.cp.commands
 general_handlers = support.cp.general_handlers
 activate = support.cp.activate
+close = support.cp.close
 
 from . import simple
 from . import msglog

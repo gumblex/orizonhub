@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .support import cp
+from .support import cp, logger
 
 @cp.register_command('autoclose')
 def cmd_autoclose(expr, msg=None):
@@ -17,25 +17,19 @@ def cmd_autoclose(expr, msg=None):
 @cp.register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
 def cmd__cmd(expr, msg=None):
     global SAY_P, APP_P
+    # TODO: verify admins
     if chatid < 0:
         return
     if expr == 'killserver':
-        APP_P.terminate()
-        APP_P = subprocess.Popen(APP_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        checkappproc()
+        cp.external.restart()
         return 'Server restarted.'
-        logging.info('Server restarted upon user request.')
     elif expr == 'commit':
-        while 1:
-            try:
-                logmsg(LOG_Q.get_nowait())
-            except queue.Empty:
-                break
-        db.commit()
+        for v in cp.bus.loggers.values():
+            v.commit()
+        logger.info('DB committed upon user request.')
         return 'DB committed.'
-        logging.info('DB committed upon user request.')
-    #elif expr == 'raiseex':  # For debug
-        #async_func(_raise_ex)(Exception('/_cmd raiseex'))
+    elif expr == 'raiseex':  # For debug
+        raise Exception('/_cmd raiseex'))
     #else:
         #return 'ping'
 
@@ -60,12 +54,3 @@ def cmd__cmd(expr, msg=None):
         #elif expr == 'on' or not CFG.get('i2t'):
             #CFG['i2t'] = True
             #return 'IRC to Telegram forwarding enabled.'
-
-@cp.register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
-def cmd__welcome(expr, msg=None):
-    if chatid > 0:
-        return
-    usr = msg["new_chat_participant"]
-    USER_CACHE[usr["id"]] = (usr.get("username"), usr.get("first_name"), usr.get("last_name"))
-    return '欢迎 %s 加入本群！' % dc_getufname(usr)
-

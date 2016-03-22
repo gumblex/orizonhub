@@ -3,21 +3,29 @@
 
 '''
 General Handlers
-aka. Blackgun Handler
 '''
 
 from .support import cp
 
 @cp.register_handler('autoclose')
 def ghd_autoclose(msg):
+    '''
+    Auto close brackets in users' messages.
+    '''
     ...
 
 @cp.register_handler('blackgun')
 def ghd_blackgun(msg):
+    '''
+    Reply some messages that fit some conditions. (aka. Blackgun Handler)
+    '''
     ...
 
 @cp.register_handler('welcome', protocol=('telegrambot',))
-def ghd_welcome(msg):
+def ghd_tg_welcome(msg):
+    '''
+    Send a welcome message when a new member comes in the Telegram group.
+    '''
     user = msg.media and msg.media.get('new_chat_participant')
     if (cp.config.command_config.get('welcome') and user
         and msg.chat.pid == cp.bus.telegrambot.identity.pid):
@@ -28,5 +36,8 @@ def ghd_welcome(msg):
 
 @cp.register_handler('private')
 def ghd_private(msg):
+    '''
+    Handler for private non-command messages. (eg. /reply)
+    '''
     ...
 

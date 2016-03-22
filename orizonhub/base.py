@@ -66,6 +66,7 @@ class BotInstance:
     def exit(self):
         for v in self.protocols.values():
             v.close()
+        provider.command.close()
         self.bus.close()
         for v in self.loggers.values():
             v.close()

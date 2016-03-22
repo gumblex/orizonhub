@@ -3,6 +3,7 @@
 
 import re
 import time
+import collections
 
 from .support import cp, Response
 

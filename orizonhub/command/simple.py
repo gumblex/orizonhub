@@ -91,7 +91,7 @@ def cmd_do(expr, msg=None):
 def cmd_fig(expr, msg=None):
     '''/fig <char> Make figure out of moon faces.'''
     if expr:
-        runapptask('fig', (expr,), (chatid, replyid))
+        cp.external('fig', expr)
     else:
         return srandom.choice('🌝🌚')
 
