@@ -107,7 +107,7 @@ def cmd_search(expr, msg=None):
 @cp.register_command('mention', protocol=('telegrambot',), dependency='sqlite')
 def cmd_mention(expr, msg=None):
     '''/mention Show last mention of you.'''
-    if msg['chat']['id'] != -CFG['groupid']:
+    if not (msg and msg.mtype == 'group'):
         return "This command can't be used in this chat."
         return
     tinput = ''

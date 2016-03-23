@@ -5,18 +5,16 @@ from .support import cp, logger
 
 @cp.register_command('autoclose')
 def cmd_autoclose(expr, msg=None):
-    global CFG
-    if msg['chat']['id'] == -CFG['groupid']:
-        if CFG.get('autoclose'):
-            CFG['autoclose'] = False
+    if msg and msg.mtype == 'group':
+        if cp.config.command_config.get('autoclose'):
+            cp.config.command_config['autoclose'] = False
             return 'Auto closing brackets disabled.'
         else:
-            CFG['autoclose'] = True
+            cp.config.command_config['autoclose'] = True
             return 'Auto closing brackets enabled.'
 
 @cp.register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
 def cmd__cmd(expr, msg=None):
-    global SAY_P, APP_P
     # TODO: verify admins
     if chatid < 0:
         return
@@ -36,7 +34,7 @@ def cmd__cmd(expr, msg=None):
 #@cp.register_command('t2i')
 #def cmd_t2i(expr, msg=None):
     #global CFG
-    #if msg['chat']['id'] == -CFG['groupid']:
+    #if msg and msg.mtype == 'group':
         #if expr == 'off' or CFG.get('t2i'):
             #CFG['t2i'] = False
             #return 'Telegram to IRC forwarding disabled.'
@@ -47,7 +45,7 @@ def cmd__cmd(expr, msg=None):
 #@cp.register_command('i2t')
 #def cmd_i2t(expr, msg=None):
     #global CFG
-    #if msg['chat']['id'] == -CFG['groupid']:
+    #if msg and msg.mtype == 'group':
         #if expr == 'off' or CFG.get('i2t'):
             #CFG['i2t'] = False
             #return 'IRC to Telegram forwarding disabled.'

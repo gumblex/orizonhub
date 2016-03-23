@@ -12,6 +12,8 @@ def ghd_autoclose(msg):
     '''
     Auto close brackets in users' messages.
     '''
+    if not (msg and msg.mtype == 'group'):
+        return
     ...
 
 @cp.register_handler('blackgun')
@@ -19,6 +21,8 @@ def ghd_blackgun(msg):
     '''
     Reply some messages that fit some conditions. (aka. Blackgun Handler)
     '''
+    if not (msg and msg.mtype == 'group'):
+        return
     ...
 
 @cp.register_handler('welcome', protocol=('telegrambot',))
@@ -39,5 +43,5 @@ def ghd_private(msg):
     '''
     Handler for private non-command messages. (eg. /reply)
     '''
-    ...
-
+    if msg and msg.mtype == 'private':
+        ...
