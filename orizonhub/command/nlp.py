@@ -6,7 +6,7 @@ from .support import cp
 @cp.register_command('name')
 def cmd_name(expr, msg=None):
     '''/name [pinyin] Get a Chinese name.'''
-    cp.external('name', expr)
+    return cp.external('name', expr).result()
 
 @cp.register_command('cc')
 def cmd_cc(expr, msg=None):
@@ -15,7 +15,7 @@ def cmd_cc(expr, msg=None):
     if 'reply_to_message' in msg:
         tinput = msg['reply_to_message'].get('text', '')
     tinput = (expr or tinput).strip()
-    cp.external('cc', tinput)
+    return cp.external('cc', tinput).result()
 
 @cp.register_command('ime')
 def cmd_ime(expr, msg=None):
@@ -28,8 +28,7 @@ def cmd_ime(expr, msg=None):
         tinput = tinput[:200] + '…'
     if not tinput:
         return 'Syntax error. Usage: ' + cmd_ime.__doc__
-        return
-    cp.external('ime', tinput)
+    return cp.external('ime', tinput).result()
 
 @cp.register_command('cut')
 def cmd_cut(expr, msg=None):
@@ -50,8 +49,7 @@ def cmd_cut(expr, msg=None):
         tinput = tinput[:1000] + '……'
     if not tinput:
         return 'Syntax error. Usage: ' + cmd_cut.__doc__
-        return
-    cp.external('cut', tinput, lang)
+    return cp.external('cut', tinput, lang).result()
 
 @cp.register_command('wyw')
 def cmd_wyw(expr, msg=None):
@@ -72,18 +70,17 @@ def cmd_wyw(expr, msg=None):
         tinput = tinput[:1000] + '……'
     if not tinput:
         return 'Syntax error. Usage: ' + cmd_wyw.__doc__
-        return
     cp.bus.status(msg.chat, 'typing')
-    cp.external('wyw', tinput, lang)
+    return cp.external('wyw', tinput, lang).result()
 
 @cp.register_command('say')
 def cmd_say(expr, msg=None):
     '''/say Say something interesting.'''
     #cp.bus.status(msg.chat, 'typing')
     if expr:
-        cp.external('reply', expr)
+        return cp.external('reply', expr).result()
     else:
-        cp.external('say')
+        return cp.external('say').result()
 
 @cp.register_command('reply')
 def cmd_reply(expr, msg=None):
@@ -95,5 +92,5 @@ def cmd_reply(expr, msg=None):
     if 'reply_to_message' in msg:
         text = msg['reply_to_message'].get('text', '')
     text = (expr.strip() or text or ' '.join(t[0] for t in cp.bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
-    cp.external('reply', text)
+    return cp.external('reply', text).result()
 
