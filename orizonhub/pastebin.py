@@ -4,6 +4,7 @@
 import os
 import time
 import hashlib
+import urllib.parse
 
 import requests
 
@@ -111,10 +112,10 @@ class SimplePasteBin(BasePasteBin):
             os.makedirs(self.cachepath)
 
     def geturl(self, filename):
-        url = os.path.join(self.baseurl, filename)
         fpath = os.path.join(self.cachepath, filename)
         if not os.path.isfile(fpath):
             raise FileNotFoundError(fpath)
+        url = os.path.join(self.baseurl, urllib.parse.quote(filename))
         return url
 
     def close(self):
