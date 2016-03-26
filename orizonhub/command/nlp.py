@@ -12,8 +12,8 @@ def cmd_name(expr, msg=None):
 def cmd_cc(expr, msg=None):
     '''/cc <Chinese> Simplified-Traditional Chinese conversion.'''
     tinput = ''
-    if 'reply_to_message' in msg:
-        tinput = msg['reply_to_message'].get('text', '')
+    if msg.reply:
+        tinput = msg.reply.text
     tinput = (expr or tinput).strip()
     return cp.external('cc', tinput).result()
 
@@ -21,8 +21,8 @@ def cmd_cc(expr, msg=None):
 def cmd_ime(expr, msg=None):
     '''/ime [pinyin] Simple Pinyin IME.'''
     tinput = ''
-    if 'reply_to_message' in msg:
-        tinput = msg['reply_to_message'].get('text', '')
+    if msg.reply:
+        tinput = msg.reply.text
     tinput = (expr or tinput).strip()
     if len(tinput) > 200:
         tinput = tinput[:200] + '…'
@@ -42,8 +42,8 @@ def cmd_cut(expr, msg=None):
     else:
         lang = None
     tinput = ''
-    if 'reply_to_message' in msg:
-        tinput = msg['reply_to_message'].get('text', '')
+    if msg.reply:
+        tinput = msg.reply.text
     tinput = (expr or tinput).strip()
     if len(tinput) > 1000:
         tinput = tinput[:1000] + '……'
@@ -63,8 +63,8 @@ def cmd_wyw(expr, msg=None):
     else:
         lang = None
     tinput = ''
-    if 'reply_to_message' in msg:
-        tinput = msg['reply_to_message'].get('text', '')
+    if msg.reply:
+        tinput = msg.reply.text
     tinput = (expr or tinput).strip()
     if len(tinput) > 1000:
         tinput = tinput[:1000] + '……'
@@ -85,12 +85,12 @@ def cmd_say(expr, msg=None):
 @cp.register_command('reply')
 def cmd_reply(expr, msg=None):
     '''/reply [question] Reply to the conversation.'''
-    if 'forward_from' in msg and msg['chat']['id'] < 0:
+    if msg.fwd_src and msg.mtype == 'group':
         return
     cp.bus.status(msg.chat, 'typing')
     text = ''
-    if 'reply_to_message' in msg:
-        text = msg['reply_to_message'].get('text', '')
+    if msg.reply:
+        tinput = msg.reply.text
     text = (expr.strip() or text or ' '.join(t[0] for t in cp.bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
     return cp.external('reply', text).result()
 

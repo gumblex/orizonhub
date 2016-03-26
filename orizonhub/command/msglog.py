@@ -16,8 +16,8 @@ def cmd_getmsg(expr, msg=None):
             raise ValueError
         mids = tuple(map(int, expr.split()))
     except Exception:
-        if 'reply_to_message' in msg:
-            return 'Message ID: t%d' % msg['reply_to_message']['message_id']
+        if msg.reply:
+            return 'Message ID: t%d' % msg.reply.pid
         else:
             return 'Syntax error. Usage: ' + cmd_getmsg.__doc__
     if msg['protocal'] == 'tgbot':
@@ -68,6 +68,7 @@ def ellipsisresult(s, find, maxctx=50):
 re_search_number = re.compile(r'([0-9]+)(,[0-9]+)?')
 
 @cp.register_command('search', dependency='sqlite')
+@cp.register_command('s', dependency='sqlite')
 def cmd_search(expr, msg=None):
     '''/search|/s [@username] [keyword] [number=5|number,offset] Search the group log for recent messages. max(number)=20'''
     username, uid, limit, offset = None, None, 5, 0
@@ -109,7 +110,6 @@ def cmd_mention(expr, msg=None):
     '''/mention Show last mention of you.'''
     if not (msg and msg.mtype == 'group'):
         return "This command can't be used in this chat."
-        return
     tinput = ''
     uid = msg['from']['id']
     user = db_getuser(uid)
@@ -194,7 +194,6 @@ def cmd_stat(expr, msg=None):
     timestr = timestring(minutes)
     if not r:
         return '在最近%s内无消息。' % timestr
-        return
     ctr = collections.Counter(i[0] for i in r)
     mcomm = ctr.most_common(5)
     count = len(r)
