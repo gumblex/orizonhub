@@ -7,6 +7,14 @@ General Handlers
 
 from .support import cp
 
+@cp.register_handler('private')
+def ghd_private(msg):
+    '''
+    Handler for private non-command messages. (eg. /reply)
+    '''
+    if msg and msg.mtype == 'private':
+        ...
+
 @cp.register_handler('autoclose')
 def ghd_autoclose(msg):
     '''
@@ -37,11 +45,3 @@ def ghd_tg_welcome(msg):
         if 'last_name' in user:
             uname += ' ' + user['last_name']
         return '欢迎 %s 加入本群！' % uname
-
-@cp.register_handler('private')
-def ghd_private(msg):
-    '''
-    Handler for private non-command messages. (eg. /reply)
-    '''
-    if msg and msg.mtype == 'private':
-        ...

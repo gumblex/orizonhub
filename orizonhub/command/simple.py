@@ -97,8 +97,8 @@ def cmd_fig(expr, msg=None):
 
 @cp.register_command('start', protocol=('telegrambot',))
 def cmd_start(expr, msg=None):
-    if chatid != -CFG['groupid']:
-        return 'This is Orz Digger. It can help you search the long and boring chat log of the ##Orz group.\nSend me /help for help.'
+    if msg.mtype == 'private':
+        return 'This is %s.\nSend me /help for help.' % cp.config.bot_nickname
 
 @cp.register_command('cancel', protocol=('telegrambot',))
 def cmd_cancel(expr, msg=None):

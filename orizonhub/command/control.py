@@ -16,7 +16,7 @@ def cmd_autoclose(expr, msg=None):
 @cp.register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
 def cmd__cmd(expr, msg=None):
     # TODO: verify admins
-    if chatid < 0:
+    if msg.mtype != 'private':
         return
     if expr == 'killserver':
         cp.external.restart()
