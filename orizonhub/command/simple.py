@@ -110,6 +110,7 @@ def cmd_hello(expr, msg=None):
 
 @cp.register_command('help')
 def cmd_help(expr, msg=None):
+    # TODO
     if expr:
         if expr in self.cmds:
             h = self.cmds[expr].__doc__

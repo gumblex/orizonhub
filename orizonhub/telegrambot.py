@@ -102,6 +102,8 @@ class TelegramBotProtocol(Protocol):
 
     def start_polling(self):
         self.identity = self._make_user(self.bot_api('getMe'))
+        self.cfg.username = self.identity.username
+        self.bus.handler.usernames.add(self.identity.username)
         while self.run:
             logger.debug('tgapi.offset: %s', self.bus.state.get('tgapi.offset', 0))
             try:
@@ -127,7 +129,7 @@ class TelegramBotProtocol(Protocol):
         if response.reply.protocol.startswith('telegram'):
             kwargs['reply_to_message_id'] = response.reply.pid
             withreplysrc = False
-            chat_id = response.reply.src.pid
+            chat_id = response.reply.chat.pid
         else:
             withreplysrc = True
             chat_id = self.dest.pid
@@ -140,7 +142,7 @@ class TelegramBotProtocol(Protocol):
                 and fmsgs[0].protocol.startswith('telegram')):
                 try:
                     m = self.bot_api('forwardMessage',
-                        chat_id=response.reply.src.pid,
+                        chat_id=response.reply.chat.pid,
                         from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid,
                         disable_notification=kwargs.get('disable_notification'))
                     return self._make_message(m)
@@ -155,11 +157,11 @@ class TelegramBotProtocol(Protocol):
                 # kwargs[rtype] must be filled
                 input_file = None
             m = self.bot_api('send' + rtype.capitalize(),
-                chat_id=response.reply.src.pid, input_file=input_file, **kwargs)
+                chat_id=response.reply.chat.pid, input_file=input_file, **kwargs)
             return self._make_message(m)
         elif rtype == 'location':
             m = self.bot_api('sendLocation',
-                chat_id=response.reply.src.pid, **kwargs)
+                chat_id=response.reply.chat.pid, **kwargs)
             return self._make_message(m)
         if withreplysrc:
             text = '%s: %s' % (smartname(response.reply.src), text)

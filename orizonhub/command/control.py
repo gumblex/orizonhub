@@ -27,7 +27,7 @@ def cmd__cmd(expr, msg=None):
         logger.info('DB committed upon user request.')
         return 'DB committed.'
     elif expr == 'raiseex':  # For debug
-        raise Exception('/_cmd raiseex'))
+        raise Exception('/_cmd raiseex')
     #else:
         #return 'ping'
 

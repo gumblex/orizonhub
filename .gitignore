@@ -71,4 +71,4 @@ config.py
 *.db
 chatlog.txt
 orzimg/
-orizonhub/ext/data/
+orizonhub/command/ext/data/

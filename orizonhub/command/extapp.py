@@ -13,13 +13,13 @@ import subprocess
 import collections
 import concurrent.futures
 
-from ..ext import zhutil
-from ..ext import zhconv
-from ..ext import figchar
-from ..ext import simpcalc
-from ..ext import simpleime
-from ..ext import mosesproxy
-from ..ext import chinesename
+from ext import zhutil
+from ext import zhconv
+from ext import figchar
+from ext import simpcalc
+from ext import simpleime
+from ext import mosesproxy
+from ext import chinesename
 
 resource.setrlimit(resource.RLIMIT_RSS, (131072, 262144))
 
@@ -57,7 +57,7 @@ def getsayingbytext(text='', mode='r'):
             SAY_P.stdin.flush()
             say = SAY_P.stdout.readline().strip().decode('utf-8')
         except BrokenPipeError:
-            SAY_P = subprocess.Popen(SAY_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd='vendor')
+            SAY_P = subprocess.Popen(SAY_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd='ext')
             SAY_P.stdin.write(text)
             SAY_P.stdin.flush()
             say = SAY_P.stdout.readline().strip().decode('utf-8')
@@ -79,42 +79,7 @@ def cmd_calc(expr):
     return r or 'Nothing'
 
 def cmd_py(expr):
-    proc = subprocess.Popen(EVIL_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd='vendor', preexec_fn=setsplimits((4, 5), (8192, 16384)))
-    try:
-        result, errs = proc.communicate(expr.strip().encode('utf-8'), timeout=5)
-    except Exception: # TimeoutExpired
-        proc.kill()
-        result, errs = proc.communicate()
-    finally:
-        if proc.poll() is None:
-            proc.terminate()
-    result = result.strip().decode('utf-8', errors='replace')
-    return result or 'None or error occurred.'
-
-def cmd_bf(expr, datain=''):
-    fd, fpath = tempfile.mkstemp()
-    with os.fdopen(fd, 'wb') as temp_bf:
-        temp_bf.write(''.join(c for c in expr if c in '-[>.<]+,').encode('latin_1'))
-    proc = subprocess.Popen(BF_CMD + (fpath,), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=setsplimits((1, 1), (1024, 2048)))
-    datain = datain.encode('utf-8')
-    try:
-        result, errs = proc.communicate(datain, timeout=1)
-    except Exception: # TimeoutExpired
-        proc.kill()
-        result, errs = proc.communicate()
-    finally:
-        if proc.poll() is None:
-            proc.terminate()
-        os.remove(fpath)
-    if len(result) > 1000:
-        result = result[:1000] + b'...'
-    result = result.decode('latin_1').encode('unicode_escape').decode('latin_1').replace('\\t', '\t').replace('\\n', '\n')
-    if len(result) > 1000:
-        result = result[:1000] + '...'
-    return result or 'None or error occurred.'
-
-def cmd_lisp(expr):
-    proc = subprocess.Popen(LISP_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd='vendor', preexec_fn=setsplimits((4, 5), (8192, 16384)))
+    proc = subprocess.Popen(EVIL_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd='ext', preexec_fn=setsplimits((4, 5), (8192, 16384)))
     try:
         result, errs = proc.communicate(expr.strip().encode('utf-8'), timeout=5)
     except Exception: # TimeoutExpired
@@ -188,8 +153,6 @@ def cmd_cont(expr):
 COMMANDS = collections.OrderedDict((
 ('calc', cmd_calc),
 ('py', cmd_py),
-('bf', cmd_bf),
-('lisp', cmd_lisp),
 ('name', cmd_name),
 ('ime', cmd_ime),
 ('fig', cmd_fig),
@@ -205,11 +168,11 @@ MSG_Q = queue.Queue()
 SAY_Q = queue.Queue(maxsize=50)
 SAY_LCK = threading.Lock()
 
-SAY_CMD = ('python3', 'say.py', 'chat.binlm', 'chatdict.txt', 'context.pkl')
+SAY_CMD = ('python3', 'say.py',
+           'data/chat.binlm', 'data/chatdict.txt', 'data/context.pkl')
 SAY_P = subprocess.Popen(SAY_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd='ext')
 
 EVIL_CMD = ('python', 'seccomp.py')
-BF_CMD = ('vendor/brainfuck',)
 LISP_CMD = ('python', 'lispy.py')
 
 executor = concurrent.futures.ThreadPoolExecutor(5)

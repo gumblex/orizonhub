@@ -22,12 +22,12 @@ class MessageHandler:
         self.providers = collections.ChainMap(self.protocols, self.loggers)
         self.executor = concurrent.futures.ThreadPoolExecutor(10)
         self.timezone = pytz.timezone(config.timezone)
-        self.usernames = [p.username for p in config.protocols.values()
-                          if 'username' in p]
+        self.usernames = set(p.username for p in config.protocols.values()
+                             if 'username' in p)
 
     def process(self, msg):
         #logger.debug(nt_repr(msg))
-        logger.debug('Message: ' + msg.text)
+        logger.info('Message: ' + msg.text)
         if isinstance(msg, Request):
             return self.dispatch(msg)
         else:
@@ -35,7 +35,7 @@ class MessageHandler:
                 for n, l in self.loggers.items():
                     self.submit_task(l.log, msg)
                 for n in self.config.forward:
-                    if n != msg.protocol:
+                    if n != msg.protocol and n in self.protocols:
                         self.submit_task(self.protocols[n].forward, msg, n)
             req = self.parse_cmd(msg.text) if msg.text else None
             if req:

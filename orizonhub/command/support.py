@@ -26,7 +26,7 @@ class CommandProvider:
     def activate(self, bus, config):
         self.bus = bus
         self.config = config
-        self.external.run()
+        self.external.start()
 
     def register_handler(self, name, protocol=None, dependency=None, enabled=True):
         def wrapper(func):
@@ -73,7 +73,8 @@ class ExternalCommandProvider:
     This class implements the old way of running resource-intensive commands
     in a subprocess, where the command behavior can be safely managed.
     '''
-    CMD = ('python3', os.path.join(os.path.dirname(__file__), 'extapp.py'))
+    DIR = os.path.dirname(__file__)
+    CMD = ('python3', os.path.join(DIR, 'extapp.py'))
 
     def __init__(self):
         self.proc = None
@@ -82,7 +83,7 @@ class ExternalCommandProvider:
         self.run = False
         self.thread = None
 
-    def run(self):
+    def start(self):
         self.run = True
         self.checkappproc()
         self.thread = threading.Thread(target=self.getappresult, name=repr(self))
@@ -90,8 +91,8 @@ class ExternalCommandProvider:
         self.thread.start()
 
     def checkappproc(self):
-        if self.run and self.proc.poll() is not None:
-            self.proc = subprocess.Popen(self.CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        if self.run and self.proc is None or self.proc.poll() is not None:
+            self.proc = subprocess.Popen(self.CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.DIR)
 
     def __call__(self, cmd, *args):
         with self.lock:
@@ -116,7 +117,7 @@ class ExternalCommandProvider:
             except BrokenPipeError:
                 self.checkappproc()
                 result = self.proc.stdout.readline().strip().decode('utf-8')
-            logging.debug('Got from extapp: ' + result)
+            #logging.debug('Got from extapp: ' + result)
             if result:
                 obj = json.loads(result)
                 fut = self.task.get(obj['id'])

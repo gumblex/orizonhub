@@ -91,6 +91,6 @@ def cmd_reply(expr, msg=None):
     text = ''
     if msg.reply:
         tinput = msg.reply.text
-    text = (expr.strip() or text or ' '.join(t[0] for t in cp.bus.sqlite.select("SELECT text FROM messages ORDER BY date DESC LIMIT 2").fetchall())).replace('\n', ' ')
+    text = (expr.strip() or text or ' '.join(t[0] for t in cp.bus.sqlite.select("SELECT text FROM messages ORDER BY time DESC LIMIT 2").fetchall())).replace('\n', ' ')
     return cp.external('reply', text).result()
 
