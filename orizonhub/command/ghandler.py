@@ -12,17 +12,36 @@ def ghd_private(msg):
     '''
     Handler for private non-command messages. (eg. /reply)
     '''
-    if msg and msg.mtype == 'private':
-        ...
+    if msg and msg.mtype == 'private' and 'reply' in cp.commands:
+        return cp.reply(msg.text, msg)
 
 @cp.register_handler('autoclose')
 def ghd_autoclose(msg):
     '''
     Auto close brackets in users' messages.
     '''
-    if not (msg and msg.mtype == 'group'):
+    if (not (msg and msg.mtype == 'group')
+        or not cp.config.command_config.get('autoclose')):
         return
-    ...
+    openbrckt = ('([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲'
+                 '⏜⎴⏞〝︵⏠﹁﹃︹︻︗︿︽﹇︷〈⦑⧼﹙﹛﹝⁽₍⦋⦍⦏⁅⸢⸤⟅⦓⦕⸦⸨｟⧘⧚⸜⸌⸂⸄⸉᚛༺༼')
+    clozbrckt = (')]}）］｝⦆〛⦄”’›»」〉》】〕⦘』〗〙｣⟧⟩⟫⟯⟭⌉⌋⦈⦊❜❞❩❫❵❭❯❱❳'
+                 '⏝⎵⏟〞︶⏡﹂﹄︺︼︘﹀︾﹈︸〉⦒⧽﹚﹜﹞⁾₎⦌⦎⦐⁆⸣⸥⟆⦔⦖⸧⸩｠⧙⧛⸝⸍⸃⸅⸊᚜༻༽')
+    stack = []
+    for ch in msg.text:
+        index = openbrckt.find(ch)
+        if index >= 0:
+            stack.append(index)
+            continue
+        index = clozbrckt.find(ch)
+        if index >= 0:
+            if stack and stack[-1] == index:
+                stack.pop()
+    closed = ''.join(reversed(tuple(map(clozbrckt.__getitem__, stack))))
+    if closed:
+        if len(closed) > 20:
+            closed = closed[:20] + '…'
+        return closed
 
 @cp.register_handler('blackgun')
 def ghd_blackgun(msg):

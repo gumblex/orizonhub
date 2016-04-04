@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-def main(args):
-    return 0
+import os
+import sys
+import json
+import sqlite3
+sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..')))
 
-if __name__ == '__main__':
-    import sys
-    sys.exit(main(sys.argv))
+from orizonhub import logger
+
+DEST = None
+FILENAME_IN = 'chatlog.db'
+FILENAME_OUT = 'chatlogv2.db'

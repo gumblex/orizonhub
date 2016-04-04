@@ -47,6 +47,8 @@ for mid, src, text, media, date, fwd_src, fwd_date, reply_id in conn.execute('SE
         media_obj = json.loads(media or '{}')
         src = dest.update_user(User(None, protocol, UserType.user, None,
             nick, realname, None, nick.rstrip('_')), CUR)
+    else:
+        ...
     # TODO: IRC proxied protocol
 
 DB.commit()

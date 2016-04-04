@@ -13,11 +13,13 @@ from .model import Message, Response, Protocol
 
 class RawSocketProtocol(Protocol):
     '''
-    Request:
-    {"type": "message", "async": true, "message": {<Message>}}
-    ==> true
-    {"type": "message", "async": false, "message": {<Message>}}
-    ==> {"type": "response", "response": <Response>}
+    > {"type": "message", "message": {<Message>}}
+    < {"ret": true}
+    > {"type": "request", "request": {<Request>}}
+    < {"ret": true, "response": {<Response>}}
+    < {"ret": false, "response": null}
+    > {"type": "get_updates", "offset": <int>}
+    < {"ret": true, "offset": <int>, "messages": [{<Message>}]}
     '''
 
     def __init__(self, config, bus):
@@ -25,8 +27,7 @@ class RawSocketProtocol(Protocol):
         self.bus = bus
         self.pastebin = bus.pastebin
         self.handlers = []
-        self.protocols = collections.defaultdict(list)
-        self.sockhdl = _request_handler(self.handlers, self.protocols, bus)
+        self.sockhdl = _request_handler(self.handlers, bus)
         address = config.protocols.socket.address
         if type(address) == tuple:
             self.sockserv = socketserver.TCPServer(address, self.sockhdl)
@@ -41,9 +42,8 @@ class RawSocketProtocol(Protocol):
             h.send(response)
 
     def forward(self, msg, protocol):
-        if protocol in self.protocols:
-            for handler in self.protocols[protocol]:
-                handler.send(msg)
+        for handler in self.protocols[protocol]:
+            handler.send(msg, protocol)
 
     def close(self):
         try:
@@ -56,7 +56,7 @@ class RawSocketProtocol(Protocol):
             except Exception:
                 pass
 
-def _request_handler(registry, protocols, bus):
+def _request_handler(registry, bus):
     class RawSocketHandler(socketserver.BaseRequestHandler):
         def setup(self):
             registry.append(self)
@@ -68,14 +68,15 @@ def _request_handler(registry, protocols, bus):
                     obj = json.loads(self.conn.recv_bytes().decode('utf-8'))
                 except EOFError:
                     break
-                if obj['type'] == 'register':
-                    protocols[obj['protocol']].append(self)
-                elif obj.get('async', True):
+                if obj['type'] == 'message':
                     bus.post(nt_from_dict(Message, obj['message'], None))
-                    self.conn.send_bytes(json.dumps(True).encode('utf-8'))
-                else:
+                    self.conn.send_bytes(json.dumps({'ret': True}).encode('utf-8'))
+                elif obj['type'] == 'request':
                     m = bus.post_sync(nt_from_dict(Message, obj['message'], None))
-                    ret = {"type": "response", "response": m._asdict() if m else None}
+                    if m:
+                        ret = {"ret": True, "response": m._asdict()}
+                    else:
+                        ret = {"ret": False, "response": None}
                     self.conn.send_bytes(json.dumps(ret).encode('utf-8'))
 
         def send(self, msg):

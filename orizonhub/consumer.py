@@ -105,6 +105,9 @@ class MessageHandler:
                 or c.dependency and c.dependency not in self.providers):
             if msg:
                 req.kwargs['msg'] = msg
+            elif 'msg' in req.kwargs:
+                # no fake messages
+                del req.kwargs['msg']
             try:
                 r = c.func(req.expr, **req.kwargs)
             except Exception:
