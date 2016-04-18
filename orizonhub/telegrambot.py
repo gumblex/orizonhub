@@ -326,7 +326,6 @@ class TelegramBotProtocol(Protocol):
     def _make_user(obj):
         if obj is None:
             return None
-        # the ident is not used at present
         if 'type' in obj:
             if obj['type'] == 'private':
                 utype = UserType.user

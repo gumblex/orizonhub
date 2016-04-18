@@ -62,6 +62,8 @@ def cmd_do(expr, msg=None):
         ('see-no-evil', '🙈'),
         ('hear-no-evil', '🙉'),
         ('speak-no-evil', '🙊'),
+        ('evil', '🙈🙉🙊'),
+        ('table', '(╯>_<)╯</ǝlqɐʇ>'),
         ('however', ('不要怪我们没有警告过你\n我们都有不顺利的时候\n'
                      'Something happened\n这真是让人尴尬\n'
                      '请坐和放宽，滚回以前的版本\n这就是你的人生\n是的，你的人生')),
