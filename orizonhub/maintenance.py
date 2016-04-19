@@ -7,12 +7,13 @@ import logging
 
 from . import provider
 from .ext import logfmt
+from .utils import nt_from_dict
 from .model import Message, User, UserType, Response
 
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 logger = logging.getLogger('maintenance')
 
-def import_chatdig(filename, group, config, exportdb=None, startfrom=None):
+def import_chatdig(filename, group, config, exportdb=None, fromtime=None, totime=None):
     irc_dest = User(None, 'irc', UserType.group, None, config.protocols.irc.channel,
                     config.protocols.irc.channel, None, config.group_name)
     sqlitelogger = provider.loggers['sqlite'](config.loggers.sqlite)
@@ -24,18 +25,18 @@ def import_chatdig(filename, group, config, exportdb=None, startfrom=None):
         logdb.db_cli.close()
         logdb.db_cli = None
         logdb.db_cli_ver = None
-    group = (1001020986, 'channel')
     logdb.init_db(filename, 'bot', True, group)
     peer = logdb.peers.find(group)
     chat = tg_make_user(peer)
     for k, obj in logdb.getmsgs(peer):
-        if startfrom and obj['date'] < startfrom:
+        if (fromtime and obj['date'] < fromtime or
+            totime and obj['date'] > totime):
             continue
         if obj['mid'] > 0:
             reply = forward_from = forward_date = None
             if obj['msgtype'] == 're':
-                reply = Message(None, 'telegrambot', obj['extra']['reply']['mid'],
-                    None, None, None, None, None, None, None, None, None, None)
+                reply = nt_from_dict(Message, {'protocol': 'telegrambot',
+                                     'pid': obj['extra']['reply']['mid']})
             elif obj['msgtype'] == 'fwd':
                 forward_from = tg_make_user(obj['extra']['fwd_src'])
                 forward_date = obj['extra']['fwd_date']
@@ -59,6 +60,39 @@ def import_chatdig(filename, group, config, exportdb=None, startfrom=None):
                 irc_dest, text, media, obj['date'], None, None, None, 'group', None
             )
             sqlitelogger.log(m)
+    sqlitelogger.close()
+
+def import_tgexport(filename, group, config, botdb=None, fromtime=None, totime=None):
+    sqlitelogger = provider.loggers['sqlite'](config.loggers.sqlite)
+    logdb = logfmt.Messages(stream=True)
+    logdb.media_format = None
+    logdb.init_db(filename, 'cli')
+    if botdb:
+        logdb.init_db(botdb, 'bot', True, group)
+    peer = logdb.peers.find(group)
+    chat = tg_make_user(peer)
+    for k, obj in logdb.getmsgs(peer):
+        if (fromtime and obj['date'] < fromtime or
+            totime and obj['date'] > totime or
+            obj['dest']['id'] != peer['id']):
+            continue
+        reply = forward_from = forward_date = None
+        if obj['msgtype'] == 're':
+            reply = nt_from_dict(Message, {'protocol': 'telegramcli',
+                                 'pid': obj['extra']['reply']['mid']})
+        elif obj['msgtype'] == 'fwd':
+            forward_from = tg_make_user(obj['extra']['fwd_src'])
+            forward_date = obj['extra']['fwd_date']
+        m = Message(
+            None, 'telegramcli', obj['mid'],
+            # from: Optional. Sender, can be empty for messages sent to channels
+            tg_make_user(obj.get('from') or obj['chat']),
+            chat, obj['text'], obj['media'] or None, obj['date'],
+            forward_from, forward_date, reply, 'group', None
+        )
+        sqlitelogger.log(m)
+    sqlitelogger.close()
+
 
 def tg_make_user(obj):
     if obj is None:
