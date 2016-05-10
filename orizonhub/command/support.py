@@ -139,7 +139,8 @@ class ExternalCommandProvider:
 
     def close(self):
         self.run = False
-        self.proc.terminate()
+        if self.proc:
+            self.proc.terminate()
 
 cp = CommandProvider()
 print(__file__)

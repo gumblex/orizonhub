@@ -66,7 +66,7 @@ class SQLiteLogger(Logger):
         ')',
     )
 
-    def __init__(self, filename, tz=None):
+    def __init__(self, filename, tz=None, wal=True):
         self.lock = threading.Lock()
         self.msg_cache = LRUCache(50)
         self.user_cache = {}
@@ -76,6 +76,8 @@ class SQLiteLogger(Logger):
             for c in self.SCHEMA:
                 cur.execute(c)
             self.conn.commit()
+            if wal:
+                cur.execute('PRAGMA journal_mode=WAL')
             for row in cur.execute('SELECT * FROM users'):
                 u = User._make(row)
                 self.user_cache[u.id] = self.user_cache[u._key()] = u

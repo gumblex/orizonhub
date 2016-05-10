@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import time
 import logging
 
@@ -43,7 +44,7 @@ def import_chatdig(filename, group, config, exportdb=None, fromtime=None, totime
             m = Message(
                 None, 'telegrambot', obj['mid'],
                 # from: Optional. Sender, can be empty for messages sent to channels
-                tg_make_user(obj.get('from') or obj['chat']),
+                tg_make_user(obj.get('src') or obj['dest']),
                 chat, obj['text'], obj['media'] or None, obj['date'],
                 forward_from, forward_date, reply, 'group', None
             )
@@ -86,7 +87,7 @@ def import_tgexport(filename, group, config, botdb=None, fromtime=None, totime=N
         m = Message(
             None, 'telegramcli', obj['mid'],
             # from: Optional. Sender, can be empty for messages sent to channels
-            tg_make_user(obj.get('from') or obj['chat']),
+            tg_make_user(obj.get('src') or obj['dest']),
             chat, obj['text'], obj['media'] or None, obj['date'],
             forward_from, forward_date, reply, 'group', None
         )
