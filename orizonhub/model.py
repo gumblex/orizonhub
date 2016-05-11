@@ -40,7 +40,9 @@ class User(collections.namedtuple('User', (
         'alias'       # Canonical name alias: str or None
     ))):
     def _key(self):
-        return (self.protocol, int(self.type), self.pid or 0, self.username or '')
+        return (self.protocol, int(self.type), self.pid or 0,
+                # normalize username to prevent pid collision
+                '' if self.pid else self.username or '')
 
 class UserType(enum.IntEnum):
     user = 1

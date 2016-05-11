@@ -143,4 +143,3 @@ class ExternalCommandProvider:
             self.proc.terminate()
 
 cp = CommandProvider()
-print(__file__)

@@ -13,6 +13,14 @@ re_ntnone = re.compile(r'\w+=None(, )?')
 re_usertype = re.compile(r'<(UserType.\w+): \d+>')
 nt_repr = lambda nt: re_usertype.sub('\\1', re_ntnone.sub('', str(nt)))
 
+def uniq(seq, key=None): # Dave Kirby
+    # Order preserving
+    seen = set()
+    if key:
+        return [x for x in seq if key(x) not in seen and not seen.add(key(x))]
+    else:
+        return [x for x in seq if x not in seen and not seen.add(x)]
+
 def nt_from_dict(nt, d, default=None):
     kwargs = dict.fromkeys(nt._fields, default)
     kwargs.update(d)

@@ -8,16 +8,43 @@ import logging
 
 from . import provider
 from .ext import logfmt
-from .utils import nt_from_dict
+from .utils import nt_from_dict, uniq
 from .model import Message, User, UserType, Response
 
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 logger = logging.getLogger('maintenance')
 
-def import_chatdig(filename, group, config, exportdb=None, fromtime=None, totime=None):
+def _msg_dedup(messages):
+    # TODO
+    return messages
+
+def import_to_db(dbs, config, sort=False):
+    sqlitelogger = provider.loggers['sqlite'](config.loggers.sqlite)
+    sqlitelogger.autocommit = False
+    messages = []
+    seen = set()
+    for dbtask in dbs:
+        dbtask = dbtask.copy()
+        dbtype = dbtask.pop('type')
+        logger.info('Processing: ' + dbtype)
+        if dbtype == 'chatdig':
+            msgiter = _import_chatdig(config=config, **dbtask)
+        elif dbtype == 'tgexport':
+            msgiter = _import_tgexport(config=config, **dbtask)
+        for msg in msgiter:
+            if sort:
+                messages.append(msg)
+            else:
+                sqlitelogger.log(msg)
+    if sort:
+        messages.sort(key=lambda m: (m.time, m.pid or 0))
+        for msg in _msg_dedup(messages):
+            sqlitelogger.log(msg)
+    sqlitelogger.close()
+
+def _import_chatdig(filename, group, config, exportdb=None, fromtime=None, totime=None):
     irc_dest = User(None, 'irc', UserType.group, None, config.protocols.irc.channel,
                     config.protocols.irc.channel, None, config.group_name)
-    sqlitelogger = provider.loggers['sqlite'](config.loggers.sqlite)
     logdb = logfmt.Messages(stream=True)
     logdb.media_format = None
     if exportdb:
@@ -48,23 +75,21 @@ def import_chatdig(filename, group, config, exportdb=None, fromtime=None, totime
                 chat, obj['text'], obj['media'] or None, obj['date'],
                 forward_from, forward_date, reply, 'group', None
             )
-            sqlitelogger.log(m)
+            yield m
         elif '_ircuser' in obj['media']:
-            text = obj["text"]
+            text = obj["text"] or ''
             action = re_ircaction.match(text)
             media = None
             if action:
                 text = action.group(1).strip()
                 media = {'action': True}
             m = Message(
-                None, 'irc', None, irc_make_user(obj['media']['_ircuser']),
-                irc_dest, text, media, obj['date'], None, None, None, 'group', None
+                None, 'irc', None, irc_make_user(obj['media']['_ircuser']), irc_dest,
+                text, media, obj['date'], None, None, None, 'group', obj["text"]
             )
-            sqlitelogger.log(m)
-    sqlitelogger.close()
+            yield m
 
-def import_tgexport(filename, group, config, botdb=None, fromtime=None, totime=None):
-    sqlitelogger = provider.loggers['sqlite'](config.loggers.sqlite)
+def _import_tgexport(filename, group, config, botdb=None, fromtime=None, totime=None):
     logdb = logfmt.Messages(stream=True)
     logdb.media_format = None
     logdb.init_db(filename, 'cli')
@@ -91,8 +116,7 @@ def import_tgexport(filename, group, config, botdb=None, fromtime=None, totime=N
             chat, obj['text'], obj['media'] or None, obj['date'],
             forward_from, forward_date, reply, 'group', None
         )
-        sqlitelogger.log(m)
-    sqlitelogger.close()
+        yield m
 
 
 def tg_make_user(obj):

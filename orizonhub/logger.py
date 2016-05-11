@@ -66,8 +66,9 @@ class SQLiteLogger(Logger):
         ')',
     )
 
-    def __init__(self, filename, tz=None, wal=True):
+    def __init__(self, filename, tz=None, wal=True, autocommit=True):
         self.lock = threading.Lock()
+        self.autocommit = autocommit
         self.msg_cache = LRUCache(50)
         self.user_cache = {}
         with self.lock:
@@ -95,7 +96,8 @@ class SQLiteLogger(Logger):
             except sqlite3.IntegrityError:
                 #logger.warning('Conflict message: %s', nt_repr(msg))
                 pass
-            self.conn.commit()
+            if self.autocommit:
+                self.conn.commit()
 
     def update_user(self, user: User, cur):
         '''
@@ -106,8 +108,11 @@ class SQLiteLogger(Logger):
         Known ID       Check         Cache & Update
         Unknown    Get ID & Check   Check, Update/New
         '''
-        def _get_user_id(uk):
-            res = cur.execute('SELECT id FROM users WHERE protocol=? AND type=? AND pid=? AND username=?', uk).fetchone()
+        def _get_user_id(user):
+            if user.pid:
+                res = cur.execute('SELECT id FROM users WHERE protocol=? AND type=? AND pid=?', (user.protocol, int(user.type), user.pid)).fetchone()
+            else:
+                res = cur.execute('SELECT id FROM users WHERE protocol=? AND type=? AND pid=? AND username=?', (user.protocol, int(user.type), 0, user.username or '')).fetchone()
             if res:
                 return res[0]
 
@@ -122,7 +127,7 @@ class SQLiteLogger(Logger):
                 uid = cur.lastrowid
             except sqlite3.IntegrityError:
                 logger.warning('Conflict user: %s', user)
-                uid = _get_user_id(uk)
+                uid = _get_user_id(user)
                 assert uid
             self.user_cache[uid] = self.user_cache[uk] = User(uid, *user[1:])
             return self.user_cache[uid]
@@ -139,7 +144,7 @@ class SQLiteLogger(Logger):
                     _update_user(uk, ret)
             # Cache miss, get id or create new
             else:
-                uid = _get_user_id(uk)
+                uid = _get_user_id(user)
                 if uid is None:
                     ret = _new_user(uk, user)
         elif cached != user:
