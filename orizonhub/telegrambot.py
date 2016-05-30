@@ -286,6 +286,8 @@ class TelegramBotProtocol(Protocol):
             elif ftype == 'location':
                 ret += ' https://www.openstreetmap.org/?mlat=%s&mlon=%s' % (
                         fval['latitude'], fval['longitude'])
+            elif ftype == 'sticker' and fval.get('emoji'):
+                ret = fval['emoji'] + ' ' + ret
             try:
                 ret += ' ' + self.bus.pastebin.paste_url(*self._parse_media(media))
             except (TypeError, NotImplementedError):
