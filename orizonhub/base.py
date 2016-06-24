@@ -30,7 +30,7 @@ class BotInstance:
         if services.pastebin == 'self':
             self.bus.pastebin = provider.SimplePasteBin(services.cachepath, services.get('maxsize', 1048576), services.mediaurl)
         elif services.pastebin == 'vim-cn':
-            self.bus.pastebin = provider.VimCN(services.cachepath)
+            self.bus.pastebin = provider.Elimage(services.cachepath, services.get('maxsize', 1048576))
         for k, v in self.config.loggers.items():
             try:
                 self.loggers[k] = provider.loggers[k](v, self.timezone)

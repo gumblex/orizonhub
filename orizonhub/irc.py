@@ -238,7 +238,7 @@ class IRCProtocol(Protocol):
     def _make_user(nick, protocol='irc', realname=None, ident=None):
         # the ident is not used at present
         return User(None, protocol, UserType.user, None,
-                    nick, realname, None, nick.rstrip('_'))
+                    nick, realname, None, nick.rstrip('_`'))
 
     @staticmethod
     def colored_smartname(user, limit=20):

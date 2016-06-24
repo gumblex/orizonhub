@@ -123,13 +123,16 @@ class SimplePasteBin(BasePasteBin):
             if time.time() - self.expire > os.path.getatime(os.path.join(self.cachepath, f)):
                 self.remove(f)
 
-class VimCN(BasePasteBin):
+class Elimage(BasePasteBin):
+    URL_IMG = 'http://img.vim-cn.com/'
+    URL_PASTE = 'http://p.vim-cn.com/'
+
     def geturl(self, filename):
         fpath = os.path.join(self.cachepath, filename)
         if os.path.splitext(filename)[1] in imgfmt:
-            r = requests.post('http://img.vim-cn.com/', files={'name': open(fpath, 'rb')})
+            r = requests.post(self.URL_IMG, files={'name': open(fpath, 'rb')})
         elif 23 <= os.path.getsize(fpath) <= 64 * 1024:
-            r = requests.post('http://p.vim-cn.com/', data={'vimcn': open(fpath, 'rb')})
+            r = requests.post(self.URL_PASTE, data={'vimcn': open(fpath, 'rb')})
         else:
             self.remove(filename)
             raise ValueError("file can't be accepted on vim-cn")

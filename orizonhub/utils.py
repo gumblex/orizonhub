@@ -3,6 +3,7 @@
 
 import re
 import signal
+import difflib
 import datetime
 import collections
 
@@ -111,3 +112,15 @@ def fwd_to_text(messages, timezone, withid=False, withuser=True):
         return '\n'.join(lines)
     else:
         return 'Message%s not found.' % ('s' if len(messages) > 1 else '')
+
+def sededit(a, b):
+    start1, end1, start2, end2 = None, None, None, None
+    s = difflib.SequenceMatcher(None, a, b)
+    for tag, i1, i2, j1, j2 in s.get_opcodes():
+        if tag == 'equal':
+            continue
+        if start1:
+            end1, end2 = i2, j2
+        else:
+            start1, start2 = i1, j1
+    return 's/%s/%s/' % (a[start1:end1], b[start2:end2])
