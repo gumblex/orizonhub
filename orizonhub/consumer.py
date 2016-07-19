@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import time
 import logging
 import collections
 import concurrent.futures
@@ -24,48 +25,57 @@ class MessageHandler:
         self.timezone = pytz.timezone(config.timezone)
         self.usernames = set(p.username for p in config.protocols.values()
                              if 'username' in p)
+        self.messagettl = 120
 
     def process(self, msg):
         #logger.debug(nt_repr(msg))
+        now = time.time()
+        tasks = {}
         logger.info('Message: ' + msg.text)
         if isinstance(msg, Request):
-            return self.dispatch(msg)
+            return tasks, self.dispatch(msg)
         else:
             if msg.mtype == 'group':
                 for n, l in self.loggers.items():
-                    self.submit_task(l.log, msg)
-                for n in self.config.forward:
-                    if n != msg.protocol and n in self.protocols:
-                        self.submit_task(self.protocols[n].forward, msg, n)
-            req = self.parse_cmd(msg.text) if msg.text else None
-            if req:
-                logger.debug('parsed request: %s', req)
-                return self.dispatch(req, msg)
+                    tasks[n] = self.submit_task(l.log, msg)
+                if self.messagettl + msg.time > now:
+                    for n in self.config.forward:
+                        if n != msg.protocol and n in self.protocols:
+                            tasks[n] = self.submit_task(
+                                self.protocols[n].forward, msg, n)
+            if self.messagettl + msg.time > now:
+                req = self.parse_cmd(msg.text) if msg.text else None
+                if req:
+                    logger.debug('parsed request: %s', req)
+                    return tasks, self.dispatch(req, msg)
+                else:
+                    return tasks, self.dispatch_gh(msg)
             else:
-                return self.dispatch_gh(msg)
+                logger.debug('ignored old message(%s): %s', msg.time, msg.text)
+        return tasks, None
 
-    def respond(self, res):
+    def respond(self, res, processed={}):
         # res.reply must be Message
         if res.reply.mtype == 'group':
             for n, p in self.protocols.items():
                 if n == self.config.main_protocol:
-                    fut = self.submit_task(p.send, res, n)
+                    fut = self.submit_task(p.send, res, n, processed.get(n))
                     fut.add_done_callback(self._resp_log_cb)
                 else:
-                    self.submit_task(p.send, res, n)
+                    self.submit_task(p.send, res, n, processed.get(n))
         else:
             pn = res.reply.protocol
-            self.submit_task(self.protocols[pn].send, res, pn)
+            self.submit_task(self.protocols[pn].send, res, pn, None)
 
     def __call__(self, msg, respond=True):
         def _do_process(msg, respond):
             try:
-                r = self.process(msg)
+                tasks, r = self.process(msg)
             except Exception:
                 logger.exception('Failed to process a message: %s', msg)
             if respond and r:
                 try:
-                    self.respond(r)
+                    self.respond(r, tasks)
                 except Exception:
                     logger.exception('Failed to respond to a message: %s', r)
             else:

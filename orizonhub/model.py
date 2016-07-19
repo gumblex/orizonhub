@@ -106,7 +106,7 @@ class Protocol:
     def start_polling(self):
         pass
 
-    def send(self, response: Response, protocol: str) -> Message:
+    def send(self, response: Response, protocol: str, forwarded: Message) -> Message:
         pass
 
     def forward(self, msg: Message, protocol: str) -> Message:

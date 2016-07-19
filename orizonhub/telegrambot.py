@@ -121,7 +121,7 @@ class TelegramBotProtocol(Protocol):
                 self.bus.state['tgapi.offset'] = maxupd + 1
             time.sleep(.2)
 
-    def send(self, response: Response, protocol: str) -> Message:
+    def send(self, response: Response, protocol: str, forwarded: Message) -> Message:
         rinfo = response.info or {}
         kwargs = rinfo.get('telegrambot', {})
         kwargs.update(rinfo.get('media', {}))
@@ -130,6 +130,10 @@ class TelegramBotProtocol(Protocol):
             kwargs['reply_to_message_id'] = response.reply.pid
             withreplysrc = False
             chat_id = response.reply.chat.pid
+        elif forwarded:
+            kwargs['reply_to_message_id'] = forwarded.pid
+            withreplysrc = False
+            chat_id = forwarded.chat.pid
         else:
             withreplysrc = True
             chat_id = self.dest.pid

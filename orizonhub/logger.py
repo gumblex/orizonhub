@@ -155,6 +155,7 @@ class SQLiteLogger(Logger):
         try:
             return self.user_cache[uid]
         except KeyError:
+            cur = self.conn.cursor()
             u = User._make(cur.execute('SELECT * FROM users WHERE id = ?',
                            (uid,)).fetchone())
             self.user_cache[u.id] = self.user_cache[u._key()] = u
@@ -164,6 +165,7 @@ class SQLiteLogger(Logger):
         res = self.msg_cache.get(mid)
         if res:
             return res
+        cur = self.conn.cursor()
         res = cur.execute('SELECT protocol, pid, src, dest, text, media, time, fwd_src, fwd_time, reply_id FROM messages WHERE id = ?', (mid,)).fetchone()
         if res is None:
             return None

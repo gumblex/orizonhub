@@ -5,7 +5,6 @@ import re
 import time
 import queue
 import logging
-import threading
 
 from .utils import smartname
 from .model import Protocol, Message, User, UserType, Response
@@ -131,7 +130,7 @@ class IRCProtocol(Protocol):
                     self.send_q.put((prio, args))
                     logger.exception('Failed to send to IRC.')
 
-    def send(self, response: Response, protocol: str) -> Message:
+    def send(self, response: Response, protocol: str, forwarded: Message) -> Message:
         # sending to proxies is not supported
         if protocol != 'irc':
             return
@@ -194,7 +193,7 @@ class IRCProtocol(Protocol):
             line_length -= 9
         lines = list(self._line_wrap((prefix2 + text).splitlines(), prefix, line_length))
         url = None
-        if len(lines) > 3:
+        if len(lines) > 5:
             try:
                 url = self.bus.pastebin.paste_text(text)
             except NotImplementedError:
