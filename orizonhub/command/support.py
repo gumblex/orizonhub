@@ -28,17 +28,17 @@ class CommandProvider:
         self.config = config
         self.external.start()
 
-    def register_handler(self, name, protocol=None, dependency=None, enabled=True):
+    def register_handler(self, name, protocol=None, mtype=None, dependency=None, enabled=True):
         def wrapper(func):
             if enabled:
-                self.general_handlers[name] = Command(func, func.__doc__, protocol, dependency)
+                self.general_handlers[name] = Command(func, func.__doc__, protocol, mtype, dependency)
             return func
         return wrapper
 
-    def register_command(self, name, protocol=None, dependency=None, enabled=True):
+    def register_command(self, name, protocol=None, mtype=None, dependency=None, enabled=True):
         def wrapper(func):
             if enabled:
-                self.commands[name] = Command(func, func.__doc__, protocol, dependency)
+                self.commands[name] = Command(func, func.__doc__, protocol, mtype, dependency)
             return func
         return wrapper
 

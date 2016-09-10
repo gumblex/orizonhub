@@ -4,8 +4,8 @@
 from .support import cp, logger
 
 @cp.register_command('autoclose')
-def cmd_autoclose(expr, msg=None):
-    if msg and msg.mtype == 'group':
+def cmd_autoclose(expr, msg=None, mtype=('group',)):
+    if msg:
         if cp.config.command_config.get('autoclose'):
             cp.config.command_config['autoclose'] = False
             return 'Auto closing brackets disabled.'
@@ -13,11 +13,9 @@ def cmd_autoclose(expr, msg=None):
             cp.config.command_config['autoclose'] = True
             return 'Auto closing brackets enabled.'
 
-@cp.register_command('_cmd', protocol=('telegrambot',), dependency='sqlite')
+@cp.register_command('_cmd', protocol=('telegrambot',), mtype=('private',), dependency='sqlite')
 def cmd__cmd(expr, msg=None):
     # TODO: verify admins
-    if msg.mtype != 'private':
-        return
     if expr == 'killserver':
         cp.external.restart()
         return 'Server restarted.'
@@ -31,10 +29,10 @@ def cmd__cmd(expr, msg=None):
     #else:
         #return 'ping'
 
-#@cp.register_command('t2i')
+#@cp.register_command('t2i', mtype=('group',))
 #def cmd_t2i(expr, msg=None):
     #global CFG
-    #if msg and msg.mtype == 'group':
+    #if msg:
         #if expr == 'off' or CFG.get('t2i'):
             #CFG['t2i'] = False
             #return 'Telegram to IRC forwarding disabled.'
@@ -42,10 +40,10 @@ def cmd__cmd(expr, msg=None):
             #CFG['t2i'] = True
             #return 'Telegram to IRC forwarding enabled.'
 
-#@cp.register_command('i2t')
+#@cp.register_command('i2t', mtype=('group',))
 #def cmd_i2t(expr, msg=None):
     #global CFG
-    #if msg and msg.mtype == 'group':
+    #if msg:
         #if expr == 'off' or CFG.get('i2t'):
             #CFG['i2t'] = False
             #return 'IRC to Telegram forwarding disabled.'

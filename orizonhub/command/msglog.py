@@ -3,11 +3,13 @@
 
 import re
 import time
+import datetime
 import collections
 
+from ..utils import smartname
 from .support import cp, Response
 
-@cp.register_command('m', dependency='sqlite')
+@cp.register_command('m', mtype=('private', 'group'), dependency='sqlite')
 def cmd_getmsg(expr, msg=None):
     '''/m <message_id> [...] Get specified message(s) by ID(s).'''
     try:
@@ -20,12 +22,19 @@ def cmd_getmsg(expr, msg=None):
             return 'Message ID: t%d' % msg.reply.pid
         else:
             return 'Syntax error. Usage: ' + cmd_getmsg.__doc__
-    if msg['protocal'] == 'tgbot':
-        self.host.tgbot.forwardmulti(mids, msg['chat']['id'], msg['message_id'])
+    messages = list(filter(None, (cp.bus.sqlite.getmsg(mid) for mid in mids)))
+    if len(messages) == 1 and msg.protocol == 'telegrambot':
+        try:
+            message = messages[0]
+            m = cp.bus.telegrambot.bot_api('forwardMessage', chat_id=msg.chat.pid,
+                from_chat_id=message.chat.pid, message_id=message.pid)
+            return
+        except BotAPIFailed:
+            return Response(forwardmulti_text(messages), {'type': 'forward', 'messages': messages}, msg)
     else:
-        self.forwardmulti(mids, chatid, replyid)
+        return Response(forwardmulti_text(messages), {'type': 'forward', 'messages': messages}, msg)
 
-@cp.register_command('context', dependency='sqlite')
+@cp.register_command('context', mtype=('private', 'group'), dependency='sqlite')
 def cmd_context(expr, msg=None):
     '''/context <message_id> [number=2] Show the specified message and its context. max=10'''
     expr = expr.split(' ')
@@ -37,11 +46,10 @@ def cmd_context(expr, msg=None):
             mid, limit = int(expr[0]), 2
     except Exception:
         return 'Syntax error. Usage: ' + cmd_context.__doc__
-        return
-    #cp.bus.status(msg.chat, 'typing')
-    forwardmulti_t(range(mid - limit, mid + limit + 1), chatid, replyid)
+    messages = list(filter(None, (cp.bus.sqlite.getmsg(mid) for mid in range(mid - limit, mid + limit + 1))))
+    return Response(forwardmulti_text(messages), {'type': 'forward', 'messages': messages}, msg)
 
-@cp.register_command('quote', dependency='sqlite')
+@cp.register_command('quote', mtype=('private', 'group'), dependency='sqlite')
 def cmd_quote(expr, msg=None):
     '''/quote Send a today's random message.'''
     #cp.bus.status(msg.chat, 'typing')
@@ -67,8 +75,8 @@ def ellipsisresult(s, find, maxctx=50):
 
 re_search_number = re.compile(r'([0-9]+)(,[0-9]+)?')
 
-@cp.register_command('search', dependency='sqlite')
-@cp.register_command('s', dependency='sqlite')
+@cp.register_command('search', mtype=('private', 'group'), dependency='sqlite')
+@cp.register_command('s', mtype=('private', 'group'), dependency='sqlite')
 def cmd_search(expr, msg=None):
     '''/search|/s [@username] [keyword] [number=5|number,offset] Search the group log for recent messages. max(number)=20'''
     username, uid, limit, offset = None, None, 5, 0
@@ -105,7 +113,7 @@ def cmd_search(expr, msg=None):
             result.append('[%d|%s] %s: %s' % (mid, time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(date + CFG['timezone'] * 3600)), db_getufname(fr), text))
     return '\n'.join(result) or 'Found nothing.'
 
-@cp.register_command('mention', protocol=('telegrambot',), dependency='sqlite')
+@cp.register_command('mention', protocol=('telegrambot',), mtype=('private', 'group'), dependency='sqlite')
 def cmd_mention(expr, msg=None):
     '''/mention Show last mention of you.'''
     if not (msg and msg.mtype == 'group'):
@@ -183,7 +191,7 @@ def cmd_uinfo(expr, msg=None):
             result.append('在最近%s内没发消息。' % timestr)
     return '\n'.join(result)
 
-@cp.register_command('stat', dependency='sqlite')
+@cp.register_command('stat', mtype=('private', 'group'), dependency='sqlite')
 def cmd_stat(expr, msg=None):
     '''/stat [minutes=1440] Show statistics.'''
     try:
@@ -202,7 +210,36 @@ def cmd_stat(expr, msg=None):
     msg.append('其他用户 %s 条，人均 %.2f 条' % (count - sum(v for k, v in mcomm), count / len(ctr)))
     return '\n'.join(msg)
 
-@cp.register_command('digest', enabled=False)
+@cp.register_command('digest', mtype=('private', 'group'), enabled=False)
 def cmd_digest(expr, msg=None):
     return 'Not implemented.'
 
+@functools.lru_cache(maxsize=10)
+def db_getuidbyname(username):
+    if username.startswith('#'):
+        try:
+            return int(username[1:])
+        except ValueError:
+            return None
+    else:
+        uid = conn.execute('SELECT id FROM users WHERE username LIKE ?', (username,)).fetchone()
+        if uid:
+            return uid[0]
+
+@functools.lru_cache(maxsize=10)
+def db_getuidbyname():
+    if username.startswith('#'):
+        try:
+            return int(username[1:])
+        except ValueError:
+            return None
+    else:
+        uid = cp.bus.sqlite.select("SELECT pid FROM users WHERE protocol = 'telegram' AND username LIKE ?", (username,)).fetchone()
+        if uid:
+            return uid[0]
+
+def forwardmulti_text(messages):
+    text = []
+    for m in messages:
+        text.append('[%s] %s: %s' % (datetime.datetime.fromtimestamp(m.time, cp.bus.timezone).strftime('%Y-%m-%d %H:%M'), smartname(m.src), m.text))
+    return '\n'.join(text) or 'Message%s not found.' % ('s' if len(message_ids) != 1 else '')

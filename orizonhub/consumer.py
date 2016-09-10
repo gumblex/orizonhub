@@ -112,7 +112,9 @@ class MessageHandler:
         if not (c is None
                 or msg is None and c.protocol
                 or c.protocol and msg.protocol not in c.protocol
-                or c.dependency and c.dependency not in self.providers):
+                or c.mtype and msg.mtype not in c.mtype
+                or c.dependency and c.dependency not in self.providers
+            ):
             if msg:
                 req.kwargs['msg'] = msg
             elif 'msg' in req.kwargs:

@@ -7,21 +7,20 @@ General Handlers
 
 from .support import cp
 
-@cp.register_handler('private')
+@cp.register_handler('private', mtype=('private',))
 def ghd_private(msg):
     '''
     Handler for private non-command messages. (eg. /reply)
     '''
-    if msg and msg.mtype == 'private' and 'reply' in cp.commands:
+    if msg and 'reply' in cp.commands:
         return cp.reply(msg.text, msg)
 
-@cp.register_handler('autoclose')
+@cp.register_handler('autoclose', mtype=('group',))
 def ghd_autoclose(msg):
     '''
     Auto close brackets in users' messages.
     '''
-    if (not (msg and msg.mtype == 'group')
-        or not cp.config.command_config.get('autoclose')):
+    if (not msg or not cp.config.command_config.get('autoclose')):
         return
     openbrckt = ('([{（［｛⦅〚⦃“‘‹«「〈《【〔⦗『〖〘｢⟦⟨⟪⟮⟬⌈⌊⦇⦉❛❝❨❪❴❬❮❰❲'
                  '⏜⎴⏞〝︵⏠﹁﹃︹︻︗︿︽﹇︷〈⦑⧼﹙﹛﹝⁽₍⦋⦍⦏⁅⸢⸤⟅⦓⦕⸦⸨｟⧘⧚⸜⸌⸂⸄⸉᚛༺༼')
@@ -43,16 +42,16 @@ def ghd_autoclose(msg):
             closed = closed[:20] + '…'
         return closed
 
-@cp.register_handler('blackgun')
+@cp.register_handler('blackgun', mtype=('group',))
 def ghd_blackgun(msg):
     '''
     Reply some messages that fit some conditions. (aka. Blackgun Handler)
     '''
-    if not (msg and msg.mtype == 'group'):
+    if not msg:
         return
     ...
 
-@cp.register_handler('welcome', protocol=('telegrambot',))
+@cp.register_handler('welcome', protocol=('telegrambot',), mtype=('group',))
 def ghd_tg_welcome(msg):
     '''
     Send a welcome message when a new member comes in the Telegram group.

@@ -98,10 +98,9 @@ def cmd_fig(expr, msg=None):
     else:
         return srandom.choice('🌝🌚')
 
-@cp.register_command('start', protocol=('telegrambot',))
+@cp.register_command('start', protocol=('telegrambot',), mtype=('private',))
 def cmd_start(expr, msg=None):
-    if msg.mtype == 'private':
-        return 'This is %s.\nSend me /help for help.' % cp.config.bot_nickname
+    return 'This is %s.\nSend me /help for help.' % cp.config.bot_nickname
 
 @cp.register_command('cancel', protocol=('telegrambot',))
 def cmd_cancel(expr, msg=None):
@@ -113,19 +112,26 @@ def cmd_hello(expr, msg=None):
 
 @cp.register_command('help')
 def cmd_help(expr, msg=None):
+    '''/help [command] List available commands or show help for some command.'''
     # TODO
     if expr:
-        if expr in self.cmds:
-            h = self.cmds[expr].__doc__
+        if expr in cp.commands:
+            h = cp.commands[expr].__doc__
             if h:
                 return h
             else:
                 return 'Help is not available for ' + expr
         else:
             return 'Command not found.'
-    elif chatid == -self.host.tgbot.cfg['groupid']:
-        return 'Full help disabled in this group.'
-    elif chatid > 0:
-        return '\n'.join(uniq(cmd.__doc__ for cmdname, cmd in self.cmds.items() if cmd.__doc__ and self.check_protocal(cmdname, 'tgbot')))
+    elif msg.mtype == 'private' and msg.protocol != 'irc':
+        return '\n'.join(uniq(cmd.usage for cmdname, cmd in cp.commands.items() if not (
+                cmd.protocol and msg.protocol not in cmd.protocol
+                or cmd.mtype and msg.mtype not in cmd.mtype
+                or cmd.dependency and cmd.dependency not in cp.bus.handler.providers)))
     else:
-        return '\n'.join(uniq(cmd.__doc__ for cmdname, cmd in self.cmds.items() if cmd.__doc__ and self.check_protocal(cmdname, 'tgbot') and not self.cmdinfo(cmdname).get('tgpriv')))
+        return 'Commands: %s. For usage: /help [cmd]' % ', '.join(uniq(
+            cmdname for cmdname, cmd in cp.commands.items() if not (
+                cmd.protocol and msg.protocol not in cmd.protocol
+                or cmd.mtype and msg.mtype not in cmd.mtype
+                or cmd.dependency and cmd.dependency not in cp.bus.handler.providers)
+        ))

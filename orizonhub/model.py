@@ -50,8 +50,13 @@ class UserType(enum.IntEnum):
     # to be compatible with tg-cli
     channel = 5
 
-Command = collections.namedtuple('Command',
-                                 ('func', 'usage', 'protocol', 'dependency'))
+Command = collections.namedtuple('Command', (
+    'func', # real function
+    'usage', # func.__doc__
+    'protocol', # list of supported protocols
+    'mtype' # list of supported mtype
+    'dependency', # depend on which provider
+))
 Response = collections.namedtuple('Response', (
     'text', # Reply text: str
     # Can be ignored if 'info' has better description of the response

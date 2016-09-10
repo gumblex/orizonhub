@@ -4,7 +4,6 @@
 
 import errno
 import socket
-import select
 import ssl
 import sys
 import threading
@@ -91,6 +90,12 @@ class IRCConnection:
             if use_ssl:
                 if (3,) <= sys.version_info < (3, 3):
                     self.sock = ssl.SSLSocket()
+                elif sys.version_info >= (3, 4):
+                    ctx = ssl.create_default_context()
+                    if ssl.HAS_SNI:
+                        self.sock = ctx.wrap_socket(socket.socket(), server_hostname=addr[0])
+                    else:
+                        self.sock = ctx.wrap_socket(socket.socket())
                 else:
                     self.sock = ssl.SSLSocket(sock=socket.socket())
             else:
