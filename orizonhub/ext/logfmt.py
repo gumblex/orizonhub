@@ -462,6 +462,16 @@ class Messages:
             dm['type'] = 'geo'
             dm['longitude'] = media['location']['longitude']
             dm['latitude'] = media['location']['latitude']
+        elif 'venue' in media:
+            dm['type'] = 'venue'
+            dm['longitude'] = media['venue']['location']['longitude']
+            dm['latitude'] = media['venue']['location']['latitude']
+            if media['venue']['title']:
+                dm['type'] = media['venue']['title']
+            dm['address'] = media['venue']['address']
+            if 'foursquare_id' in media['venue']:
+                dm['provider'] = 'foursquare'
+                dm['venue_id'] = media['venue']['foursquare_id']
         elif 'new_chat_participant' in media:
             user = media['new_chat_participant']
             da['type'] = 'chat_add_user'
@@ -515,10 +525,20 @@ class Messages:
                 d['document'] = {}
             elif 'longitude' in media:
                 # 'type' may be the name of the place
-                d['location'] = {
+                loc = {
                     'longitude': media['longitude'],
                     'latitude': media['latitude']
                 }
+                if media['type'] == 'geo':
+                    d['location'] = loc
+                else:
+                    d['venue'] = {
+                        'location': loc,
+                        'title': media['type'] if media['type'] != 'venue' else '',
+                        'address': media['address']
+                    }
+                    if media.get('provider') == 'foursquare' and 'venue_id' in media:
+                        d['venue']['foursquare_id'] = media['venue_id']
             elif media['type'] == 'contact':
                 del media['type']
                 media['phone_number'] = media.pop('phone')
@@ -656,12 +676,12 @@ def main(argv):
     parser.add_argument("-D", "--botdb-dest", help="tg-chatdig bot logged chat id or tg-cli-style peer name")
     parser.add_argument("-u", "--botdb-user", action="store_true", help="use user information in tg-chatdig database first")
     parser.add_argument("-t", "--template", help="export template, can be 'txt'(default), 'html', 'json', or template file name", default="txt")
-    parser.add_argument("-p", "--peer", help="export certain peer id or tg-cli-style peer name")
     parser.add_argument("-P", "--peer-print", help="set print name for the peer")
     parser.add_argument("-l", "--limit", help="limit the number of fetched messages and set the offset")
     parser.add_argument("-L", "--hardlimit", help="set a hard limit of the number of messages, must be used with -l", type=int, default=100000)
     parser.add_argument("-c", "--cachedir", help="the path of media files")
     parser.add_argument("-r", "--urlprefix", help="the url prefix of media files")
+    parser.add_argument("peer", help="export certain peer id or tg-cli-style peer print name")
     args = parser.parse_args(argv)
 
     msg = Messages(stream=args.template.endswith('html'))
