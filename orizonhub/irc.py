@@ -14,13 +14,50 @@ logger = logging.getLogger('irc')
 
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
-re_ircforward = re.compile(r'^\[([^]]+)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
+re_ircforward = re.compile(r'^\[(.+?)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
 
 md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
 
-def tgentity2irc(m: Message) -> str:
-    def split_entity():
-        ...
+tgentity_templates = {
+    'irc': {
+        'bold': '\x02%(t)s\x02',
+        'italic': '\x1D%(t)s\x1D',
+        'text_link': '\x1F%(t)s\x1F (%(url)s)',
+        'text_mention': '\x1F%(t)s\x1F',
+    },
+    'markdown': {
+        'bold': '**%(t)s**',
+        'italic': '_%(t)s_',
+        'code': '`%(t)s`',
+        'pre': '```\n%(t)s\n```',
+        'text_link': '[%(t)s](%(url)s)',
+        'text_mention': '_%(t)s_',
+    },
+    'markdown2': {
+        'url': '[%(t)s](%(t)s)',
+        'email': '[%(t)s](mailto:%(t)s)',
+        'bold': '**%(t)s**',
+        'italic': '_%(t)s_',
+        'code': '`%(t)s`',
+        'pre': '```\n%(t)s\n```',
+        'text_link': '[%(t)s](%(url)s)',
+        'text_mention': '_%(t)s_',
+    }
+}
+
+def tgentity_conv(m: Message, style='irc') -> str:
+    u16txt = m.text.encode('utf-16le')
+    entities = sorted((e['offset'], e['length'], e) for e in m.media['entities'])
+    pos = 0
+    out = ''
+    for offset, length, entity in entities:
+        if offset > pos:
+            out += u16txt[pos*2:offset*2].decode('utf-16le')
+        entity['t'] = u16txt[offset*2:(offset+length)*2].decode('utf-16le')
+        out += tgentity_templates[style].get(entity['type'], '%(t)s') % entity
+        pos = offset + length
+    out += u16txt[pos*2:].decode('utf-16le')
+    return out
 
 class IRCProtocol(Protocol):
     def __init__(self, config, bus):
@@ -162,7 +199,10 @@ class IRCProtocol(Protocol):
         if protocol != 'irc' or msg.protocol in self.proxies:
             return
         prefix = '[%s] ' % smartname(msg.src)
-        text = msg.alttext or msg.text
+        text = msg.alttext or (tgentity_conv(msg)
+                if msg.media and 'entities' in msg.media else msg.text)
+        alttext = msg.alttext or (tgentity_conv(msg, 'markdown')
+                if msg.media and 'entities' in msg.media else msg.text)
         if msg.fwd_src or msg.reply:
             if msg.fwd_src:
                 src = smartname(msg.fwd_src)
@@ -182,7 +222,7 @@ class IRCProtocol(Protocol):
             prefix2 += src + ': '
         else:
             prefix2 = ''
-        lines = self.longtext(text, prefix, prefix2, msg.media and msg.media.get('action'))
+        lines = self.longtext(text, prefix, prefix2, alttext, msg.media and msg.media.get('action'))
         for k, l in enumerate(lines):
             self.say(l, priority=(1, msg.time, k))
         return Message(
@@ -191,8 +231,9 @@ class IRCProtocol(Protocol):
             msg.alttext
         )
 
-    def longtext(self, text, prefix, prefix2='', action=False):
+    def longtext(self, text, prefix, prefix2='', alttext=None, action=False):
         line_length = self.line_length
+        alttext = alttext or text
         if action:
             line_length -= 9
         lines = list(self._line_wrap((prefix2 + text).splitlines(), prefix, line_length))

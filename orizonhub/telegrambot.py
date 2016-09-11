@@ -65,7 +65,7 @@ class BotAPIFailed(Exception):
 class TelegramBotProtocol(Protocol):
     # media fields may change in the future, so use the inverse.
     STATIC_FIELDS = frozenset(('message_id', 'from', 'date', 'chat', 'forward_from',
-                    'forward_date', 'reply_to_message', 'text', 'entities', 'caption'))
+                    'forward_date', 'reply_to_message', 'text', 'caption'))
     METHODS = frozenset((
         'getMe', 'sendMessage', 'forwardMessage', 'sendPhoto', 'sendAudio',
         'sendDocument', 'sendSticker', 'sendVideo', 'sendVoice', 'sendLocation',
@@ -281,6 +281,8 @@ class TelegramBotProtocol(Protocol):
         if not media:
             return ''
         ftype, fval = tuple(media.items())[0]
+        if ftype == 'entities':
+            return ''
         ret = '<%s>' % ftype
         if 'new_chat_title' in media:
             ret += ' ' + media['new_chat_title']
