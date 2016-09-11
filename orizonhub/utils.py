@@ -103,8 +103,8 @@ def fwd_to_text(messages, timezone, withid=False, withuser=True):
         # [%d|%s] %s: %s
         lines.append('[%s%s] %s%s' % (
             str(messages.id) + '|' if withid and messages.id else '',
-            datetime.fromtimestamp(m.time, timezone).strftime(
-            '%Y-%m-%d %H:%M:%S'),
+            datetime.datetime.fromtimestamp(m.time, timezone).strftime(
+            '%Y-%m-%d %H:%M'),
             smartname(m.src) + ': ' if withuser else '',
             m.text
         ))

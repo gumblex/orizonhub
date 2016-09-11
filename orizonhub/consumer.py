@@ -56,14 +56,19 @@ class MessageHandler:
 
     def respond(self, res, processed={}):
         # res.reply must be Message
+        proxied = {r.protocol:r for r in res.proxied_reply} if res.proxied_reply else {}
         if res.reply.mtype == 'group':
             for n, p in self.protocols.items():
-                if n == self.config.main_protocol:
-                    fut = self.submit_task(p.send, res, n, processed.get(n))
+                if n in proxied:
+                    if n == self.config.main_protocol:
+                        for loggername, l in self.loggers.items():
+                            self.submit_task(l.log, proxied[n])
+                elif n == self.config.main_protocol:
+                    fut = self.submit_task(p.send, res, n, processed[n].result() if n in processed else None)
                     fut.add_done_callback(self._resp_log_cb)
                 else:
-                    self.submit_task(p.send, res, n, processed.get(n))
-        else:
+                    self.submit_task(p.send, res, n, processed[n].result() if n in processed else None)
+        elif res.reply.protocol not in proxied:
             pn = res.reply.protocol
             self.submit_task(self.protocols[pn].send, res, pn, None)
 
@@ -128,24 +133,25 @@ class MessageHandler:
             logger.debug('response: %s', r)
             if r:
                 if not isinstance(r, Response):
-                    r = Response(r, None, msg)
+                    r = Response(r, None, msg, None)
                 return r
 
     def dispatch_gh(self, msg: Message):
         '''
         Dispatch general handlers. Only return the first answer.
         '''
-        for gh in command.general_handlers.values():
+        for ghname, gh in command.general_handlers.items():
             if not (gh.protocol and msg.protocol not in gh.protocol
+                    or gh.mtype and msg.mtype not in gh.mtype
                     or gh.dependency and gh.dependency not in self.providers):
                 try:
                     r = gh.func(msg)
                 except Exception:
-                    logger.exception('Failed to execute general handler: %s', gh)
+                    logger.exception('Failed to execute general handler: %s, %s', ghname, msg)
                     continue
                 if r:
                     if not isinstance(r, Response):
-                        r = Response(r, None, msg)
+                        r = Response(r, None, msg, None)
                     return r
 
     def submit_task(self, fn, *args, **kwargs):

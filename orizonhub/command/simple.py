@@ -45,7 +45,7 @@ def cmd_233(expr, msg=None):
             txt += ', 🌝%.2f%%' % wfi
         txt += ')'
     return Response(txt, {'white': wcount, 'black': num - wcount, 
-                    'white_face_index': wfi}, msg)
+                    'white_face_index': wfi}, msg, None)
 
 @cp.register_command('do')
 def cmd_do(expr, msg=None):
@@ -124,13 +124,14 @@ def cmd_help(expr, msg=None):
         else:
             return 'Command not found.'
     elif msg.mtype == 'private' and msg.protocol != 'irc':
-        return '\n'.join(uniq(cmd.usage for cmdname, cmd in cp.commands.items() if not (
+        return '\n'.join(uniq(cmd.usage for cmdname, cmd in cp.commands.items() if
+                cmd.usage and not (
                 cmd.protocol and msg.protocol not in cmd.protocol
                 or cmd.mtype and msg.mtype not in cmd.mtype
                 or cmd.dependency and cmd.dependency not in cp.bus.handler.providers)))
     else:
         return 'Commands: %s. For usage: /help [cmd]' % ', '.join(uniq(
-            cmdname for cmdname, cmd in cp.commands.items() if not (
+            '/' + cmdname for cmdname, cmd in cp.commands.items() if not (
                 cmd.protocol and msg.protocol not in cmd.protocol
                 or cmd.mtype and msg.mtype not in cmd.mtype
                 or cmd.dependency and cmd.dependency not in cp.bus.handler.providers)

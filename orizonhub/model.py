@@ -54,7 +54,7 @@ Command = collections.namedtuple('Command', (
     'func', # real function
     'usage', # func.__doc__
     'protocol', # list of supported protocols
-    'mtype' # list of supported mtype
+    'mtype', # list of supported mtype
     'dependency', # depend on which provider
 ))
 Response = collections.namedtuple('Response', (
@@ -90,7 +90,8 @@ Response = collections.namedtuple('Response', (
     #   - 'caption', 'duration', 'performer', 'title', 'width', 'height',
     #     'latitude', 'longitude': media specified options in Telegram Bot API
     # 'alttext' field -> str: alternative text, for media types
-    'reply' # Replied message: Message
+    'reply', # Message to reply: Message
+    'proxied_reply' # Sent replied messages by command: [Message]
 ))
 
 class Logger:

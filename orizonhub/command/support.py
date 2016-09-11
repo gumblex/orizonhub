@@ -11,7 +11,7 @@ import subprocess
 import collections
 import concurrent.futures
 
-from ..model import Command, Response
+from ..model import Message, Command, Response
 
 logger = logging.getLogger('cmd')
 
@@ -133,7 +133,7 @@ class ExternalCommandProvider:
 
     def restart(self):
         self.proc.terminate()
-        self.proc = subprocess.Popen(APP_CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.proc = subprocess.Popen(self.CMD, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         self.checkappproc()
         logging.info('External command provider restarted.')
 

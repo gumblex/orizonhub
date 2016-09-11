@@ -13,7 +13,7 @@ def ghd_private(msg):
     Handler for private non-command messages. (eg. /reply)
     '''
     if msg and 'reply' in cp.commands:
-        return cp.reply(msg.text, msg)
+        return cp.reply.func(msg.text, msg)
 
 @cp.register_handler('autoclose', mtype=('group',))
 def ghd_autoclose(msg):

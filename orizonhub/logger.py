@@ -173,7 +173,7 @@ class SQLiteLogger(Logger):
         msg = Message(
             mid, protocol, pid, self.getuser(src), self.getuser(dest), text,
             media and json.loads(media), time, fwd_src and self.getuser(fwd_src),
-            fwd_time, reply_id and self.getmsg(reply_id)
+            fwd_time, reply_id and self.getmsg(reply_id), 'group', None
         )
         self.msg_cache[mid] = msg
         return msg

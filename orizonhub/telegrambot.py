@@ -65,13 +65,14 @@ class BotAPIFailed(Exception):
 class TelegramBotProtocol(Protocol):
     # media fields may change in the future, so use the inverse.
     STATIC_FIELDS = frozenset(('message_id', 'from', 'date', 'chat', 'forward_from',
-                    'forward_date', 'reply_to_message', 'text', 'caption'))
+                    'forward_date', 'reply_to_message', 'text', 'entities', 'caption'))
     METHODS = frozenset((
         'getMe', 'sendMessage', 'forwardMessage', 'sendPhoto', 'sendAudio',
         'sendDocument', 'sendSticker', 'sendVideo', 'sendVoice', 'sendLocation',
         'sendChatAction', 'getUserProfilePhotos', 'getUpdates', 'setWebhook',
         'getFile', 'answerInlineQuery'
     ))
+    BotAPIFailed = BotAPIFailed
 
     def __init__(self, config, bus):
         self.config = config
@@ -140,19 +141,20 @@ class TelegramBotProtocol(Protocol):
         rtype = rinfo.get('type')
         if rtype == 'markdown':
             kwargs['parse_mode'] = 'Markdown'
-        elif rtype == 'forward':
-            fmsgs = rinfo['messages']
-            if (len(fmsgs) == 1 and fmsgs[0].pid
-                and fmsgs[0].protocol.startswith('telegram')):
-                try:
-                    m = self.bot_api('forwardMessage',
-                        chat_id=response.reply.chat.pid,
-                        from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid,
-                        disable_notification=kwargs.get('disable_notification'))
-                    return self._make_message(m)
-                except BotAPIFailed:
-                    pass
-            text = fwd_to_text(fmsgs, self.bus.timezone)
+        # we have handled this in commands
+        #elif rtype == 'forward':
+            #fmsgs = rinfo['messages']
+            #if (len(fmsgs) == 1 and fmsgs[0].pid
+                #and fmsgs[0].protocol.startswith('telegram')):
+                #try:
+                    #m = self.bot_api('forwardMessage',
+                        #chat_id=response.reply.chat.pid,
+                        #from_chat_id=fmsgs[0].chat.id, message_id=fmsgs[0].pid,
+                        #disable_notification=kwargs.get('disable_notification'))
+                    #return self._make_message(m)
+                #except BotAPIFailed:
+                    #pass
+            #text = fwd_to_text(fmsgs, self.bus.timezone)
         elif rtype in ('photo', 'audio', 'document', 'sticker', 'video', 'voice'):
             fn = rinfo['media'].get('_file')
             if fn:

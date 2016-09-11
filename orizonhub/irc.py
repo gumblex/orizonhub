@@ -18,6 +18,10 @@ re_ircforward = re.compile(r'^\[([^]]+)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
 
 md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
 
+def tgentity2irc(m: Message) -> str:
+    def split_entity():
+        ...
+
 class IRCProtocol(Protocol):
     def __init__(self, config, bus):
         self.config = config
