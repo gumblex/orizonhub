@@ -117,14 +117,14 @@ class ExternalCommandProvider:
             except BrokenPipeError:
                 self.checkappproc()
                 result = self.proc.stdout.readline().strip().decode('utf-8')
-            #logging.debug('Got from extapp: ' + result)
+            logging.debug('Got from extapp: ' + result)
             if result:
                 obj = json.loads(result)
                 fut = self.task.get(obj['id'])
                 if fut:
                     if obj['exc']:
                         fut.set_exception(Exception(obj['exc']))
-                        # logging.error('Remote app server error.\n' + obj['exc'])
+                        logging.error('Remote app server error.\n' + obj['exc'])
                     else:
                         fut.set_result(obj['ret']) # or 'Empty.'
                     del self.task[obj['id']]

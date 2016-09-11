@@ -1,6 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import re
 import itertools
+
+'''
+Various functions for processing Chinese text.
+'''
 
 halfwidth = frozenset('!(),:;?')
 fullwidth = frozenset(itertools.chain(
@@ -51,8 +58,7 @@ ucjk = frozenset(itertools.chain(
     range(0x20000, 0x2FFFF + 1)
 ))
 
-zhcmodel = None
-zhmmodel = None
+zhmodel = None
 _curpath = os.path.normpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
@@ -65,9 +71,13 @@ RE_FW = re.compile(
 RE_UCJK = re.compile(
     '([\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\U00020000-\U0002A6D6]+)')
 
-# Detokenization function for Chinese.
-detokenize = lambda s: RE_WS_IN_FW.sub(r'\1', s).strip()
+RE_CTRL = re.compile("[\000-\037\ufeff]+")
 
+hasucjk = lambda s: RE_UCJK.search(s)
+removectrl = lambda s: RE_CTRL.sub('', s)
+
+detokenize = lambda s: RE_WS_IN_FW.sub(r'\1', s).strip()
+detokenize.__doc__ = 'Detokenization function for Chinese.'
 
 def splitsentence(sentence):
     '''Split a piece of Chinese into sentences.'''
@@ -172,20 +182,18 @@ def addwallzone(tokiter):
 
 def calctxtstat(s):
     '''Detect whether a string is modern or classical Chinese.'''
-    global zhcmodel, zhmmodel
-    if zhcmodel is None:
+    global zhmodel
+    if zhmodel is None:
         import json
-        zhcmodel = json.load(
-            open(os.path.join(_curpath, 'modelzhc.json'), 'r', encoding='utf-8'))
-        zhmmodel = json.load(
-            open(os.path.join(_curpath, 'modelzhm.json'), 'r', encoding='utf-8'))
+        zhmodel = json.load(
+            open(os.path.join(_curpath, 'modelzh.json'), 'r', encoding='utf-8'))
     cscore = 0
     mscore = 0
     for ch in s:
         ordch = ord(ch)
         if 0x4E00 <= ordch < 0x9FCD:
-            cscore += zhcmodel[ordch - 0x4E00]
-            mscore += zhmmodel[ordch - 0x4E00]
+            cscore += zhmodel['zhc'][ordch - 0x4E00]
+            mscore += zhmodel['zhm'][ordch - 0x4E00]
     return (cscore, mscore)
 
 

@@ -43,6 +43,7 @@ Locales = {
 }
 
 DICTIONARY = "zhcdict.json"
+CHARDIFF = "chardiff.txt"
 
 zhcdicts = None
 dict_zhcn = None
@@ -399,8 +400,7 @@ def main():
         locale = sys.argv[2]
         convertfunc = convert_for_mw
     else:
-        thisfile = __file__ if __name__ == '__main__' else 'python -mzhconv'
-        print("usage: %s [-w] {zh-cn|zh-tw|zh-hk|zh-sg|zh-hans|zh-hant|zh} < input > output" % thisfile)
+        print("usage: %s [-w] {zh-cn|zh-tw|zh-hk|zh-sg|zh-hans|zh-hant|zh} < input > output" % __file__)
         sys.exit(1)
 
     loaddict()

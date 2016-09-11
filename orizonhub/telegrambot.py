@@ -104,7 +104,9 @@ class TelegramBotProtocol(Protocol):
     def start_polling(self):
         self.identity = self._make_user(self.bot_api('getMe'))
         self.cfg.username = self.identity.username
-        self.bus.handler.usernames.add(self.identity.username)
+        # reload usernames
+        self.bus.handler.usernames = set(p.username for p in
+            self.bus.handler.config.protocols.values() if 'username' in p)
         while self.run:
             logger.debug('tgapi.offset: %s', self.bus.state.get('tgapi.offset', 0))
             try:
