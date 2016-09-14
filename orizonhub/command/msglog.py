@@ -214,6 +214,7 @@ def cmd_stat(expr, msg=None):
         minutes = min(max(int(expr), 1), 3359733)
     except Exception:
         minutes = 1440
+    # TODO: group by alias
     r = cp.bus.sqlite.select('SELECT src FROM messages WHERE time > ?', (time.time() - minutes * 60,)).fetchall()
     timestr = timestring(minutes)
     if not r:

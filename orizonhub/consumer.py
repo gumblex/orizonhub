@@ -38,13 +38,15 @@ class MessageHandler:
             if msg.mtype == 'group':
                 for n, l in self.loggers.items():
                     tasks[n] = self.submit_task(l.log, msg)
-                if self.messagettl + msg.time > now:
+                if self.messagettl + (
+                    msg.media and msg.media.get('edit_date') or msg.time) > now:
                     for n in self.config.forward:
                         if n != msg.protocol and n in self.protocols:
                             tasks[n] = self.submit_task(
                                 self.protocols[n].forward, msg, n)
             if self.messagettl + msg.time > now:
-                req = self.parse_cmd(msg.text) if msg.text else None
+                req = self.parse_cmd(msg.text) if msg.text and (
+                        not msg.media or 'edit_date' not in msg.media) else None
                 if req:
                     logger.debug('parsed request: %s', req)
                     return tasks, self.dispatch(req, msg)

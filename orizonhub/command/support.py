@@ -117,8 +117,8 @@ class ExternalCommandProvider:
             except BrokenPipeError:
                 self.checkappproc()
                 result = self.proc.stdout.readline().strip().decode('utf-8')
-            logging.debug('Got from extapp: ' + result)
             if result:
+                logging.debug('Got from extapp: ' + result)
                 obj = json.loads(result)
                 fut = self.task.get(obj['id'])
                 if fut:

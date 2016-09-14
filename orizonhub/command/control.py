@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from ..model import User
+from ..utils import nt_from_dict
 from .support import cp, logger
 
 @cp.register_command('autoclose')
@@ -28,6 +30,17 @@ def cmd__cmd(expr, msg=None):
         raise Exception('/_cmd raiseex')
     #else:
         #return 'ping'
+
+@cp.register_command('nick', mtype=('private', 'group'), dependency='sqlite', enabled=False)
+def cmd_nick(expr, msg=None):
+    '''/nick <name> Set your nickname on other platforms'''
+    nick = expr.strip()
+    if not nick:
+        return 'Usage: ' + cmd_nick.__doc__
+    user = msg.src._asdict()
+    user['alias'] = nick
+    cp.bus.sqlite.update_user(nt_from_dict(User, user))
+    return 'Set your nickname to ' + nick
 
 #@cp.register_command('t2i', mtype=('group',))
 #def cmd_t2i(expr, msg=None):

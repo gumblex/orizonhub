@@ -48,10 +48,11 @@ class SQLiteLogger(Logger):
             'fwd_src INTEGER,'
             'fwd_time INTEGER,'
             'reply_id INTEGER,'
-            'FOREIGN KEY (src) REFERENCES users(id),'
+            'FOREIGN KEY (src) REFERENCES users(id)'
             # For the purposes of UNIQUE constraints, NULL values are considered
             # distinct from all other values, including other NULLs.
-            'UNIQUE (protocol, pid)'
+            # No, we don't check these because of edited messages.
+            #'UNIQUE (protocol, pid, time)'
         ')',
         'CREATE TABLE IF NOT EXISTS users ('
             'id INTEGER PRIMARY KEY,'
@@ -64,6 +65,7 @@ class SQLiteLogger(Logger):
             'alias TEXT,'
             'UNIQUE (protocol, type, pid, username)'
         ')',
+        'CREATE INDEX IF NOT EXISTS idx_messages ON messages (protocol, pid)'
     )
 
     def __init__(self, filename, tz=None, wal=True, autocommit=True):
@@ -99,7 +101,7 @@ class SQLiteLogger(Logger):
             if self.autocommit:
                 self.conn.commit()
 
-    def update_user(self, user: User, cur):
+    def update_user(self, user: User, cur=None):
         '''
         Update user in database if necessary, returns a User with `id` set.
 
@@ -135,6 +137,9 @@ class SQLiteLogger(Logger):
         uk = user._key()
         cached = self.user_cache.get(uk)
         ret = user
+
+        if cur is None:
+            cur = self.conn.cursor()
 
         if user.id is None:
             # Cache hit, check and update

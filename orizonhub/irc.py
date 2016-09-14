@@ -5,6 +5,7 @@ import re
 import time
 import queue
 import logging
+from zlib import crc32
 
 from .utils import smartname
 from .model import Protocol, Message, User, UserType, Response
@@ -119,7 +120,7 @@ class IRCProtocol(Protocol):
                 self.ready = True
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
-                if self.cfg.ignore and re.match(self.cfg.ignore, line["nick"]):
+                if self.cfg.ignored_user and re.match(self.cfg.ignored_user, line["nick"]):
                     continue
                 if line["dest"] == self.cfg.username:
                     mtype = 'private'
@@ -176,18 +177,17 @@ class IRCProtocol(Protocol):
         if protocol != 'irc':
             return
         if (response.info or {}).get('type') == 'markdown':
-            lines = md2ircfmt(response.text).splitlines()
+            text = md2ircfmt(response.text)
         else:
-            lines = response.text.splitlines()
+            text = (response.info or {}).get('alttext') or response.text
         if response.reply.mtype == 'private':
-            text = ''
+            prefix = ''
+        elif self.cfg.get('colored'):
+            prefix = '\x0315%s\x03: ' % smartname(response.reply.src)
         else:
-            text = smartname(response.reply.src) + ': '
-        if len(lines) < 3:
-            text += ' '.join(lines)
-        else:
-            text += lines[0] + ' […] ' + lines[-1]
-        self.say(text, response.reply.chat, (0, time.time(), 1))
+            prefix = smartname(response.reply.src) + ': '
+        lines = self.longtext(text, prefix, command=True)
+        self.say(lines[0], response.reply.chat, (0, time.time(), 1))
         return Message(
             None, 'irc', None, self.identity, response.reply.chat, text,
             None, int(time.time()), None, None, response.reply,
@@ -198,7 +198,10 @@ class IRCProtocol(Protocol):
         # `protocol` is ignored
         if protocol != 'irc' or msg.protocol in self.proxies:
             return
-        prefix = '[%s] ' % smartname(msg.src)
+        if self.cfg.get('colored'):
+            prefix = '[%s] ' % self.colored_smartname(msg.src)
+        else:
+            prefix = '[%s] ' % smartname(msg.src)
         text = msg.alttext or (tgentity_conv(msg)
                 if msg.media and 'entities' in msg.media else msg.text)
         alttext = msg.alttext or (tgentity_conv(msg, 'markdown')
@@ -207,9 +210,11 @@ class IRCProtocol(Protocol):
             if msg.fwd_src:
                 src = smartname(msg.fwd_src)
                 prefix2 = 'Fwd '
+                replytext = None
             else:
                 src = smartname(msg.reply.src)
                 prefix2 = ''
+                replytext = msg.reply.text
             if msg.reply and msg.reply.src.protocol == 'telegram' and (
                 'telegrambot' in self.bus and
                 self.bus.telegrambot.identity.pid == msg.reply.src.pid
@@ -219,10 +224,19 @@ class IRCProtocol(Protocol):
                 rnmatch = re_ircforward.match(msg.reply.text)
                 if rnmatch:
                     src = rnmatch.group(1) or src
-            prefix2 += src + ': '
+                    replytext = rnmatch.group(2) or replytext
+            if replytext and self.cfg.get('long_reply'):
+                if len(replytext) > 8:
+                    replytext = replytext[:8] + '…'
+                prefix2 = 'Re %s:「%s」' % (src, replytext)
+            else:
+                prefix2 += src + ': '
+            if self.cfg.get('colored'):
+                prefix2 = '\x0315%s\x03' % prefix2
         else:
             prefix2 = ''
-        lines = self.longtext(text, prefix, prefix2, alttext, msg.media and msg.media.get('action'))
+        lines = self.longtext(text, prefix, prefix2, alttext,
+                              msg.media and msg.media.get('action'))
         for k, l in enumerate(lines):
             self.say(l, priority=(1, msg.time, k))
         return Message(
@@ -231,25 +245,30 @@ class IRCProtocol(Protocol):
             msg.alttext
         )
 
-    def longtext(self, text, prefix, prefix2='', alttext=None, action=False):
+    def longtext(self, text, prefix, prefix2='', alttext=None, action=False, command=False):
         line_length = self.line_length
         alttext = alttext or text
         if action:
             line_length -= 9
         lines = list(self._line_wrap((prefix2 + text).splitlines(), prefix, line_length))
         url = None
-        if len(lines) > 5:
+        if len(lines) > 5 or command and len(lines) > 2:
             try:
-                url = self.bus.pastebin.paste_text(text)
+                url = self.bus.pastebin.paste_text(alttext)
             except NotImplementedError:
                 pass
             except Exception:
                 logger.exception('Failed to paste the text')
             if url is None:
-                lines = lines[:3]
-                lines[-1] += ' […]'
+                if command:
+                    lines = [lines[0] + ' […] ' + lines[-1]]
+                else:
+                    lines = lines[:3]
+                    lines[-1] += ' […]'
             else:
                 return [prefix + prefix2 + '<long text> ' + url]
+        elif command:
+            return [prefix + prefix2 + ' '.join(lines)]
         for k, l in enumerate(lines):
             lines[k] = prefix + l
         return lines
@@ -287,7 +306,7 @@ class IRCProtocol(Protocol):
     @staticmethod
     def colored_smartname(user, limit=20):
         palette = (2, 3, 4, 5, 6, 7, 10, 12, 13)
-        color = user.id % len(palette)
+        color = (user.pid or crc32(user.username.encode('utf-8')) or user.id or 0) % len(palette)
         return '\x03%02d%s\x03' % (palette[color], smartname(user, limit))
 
     def close(self):

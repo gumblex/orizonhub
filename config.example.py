@@ -31,14 +31,16 @@ config = {
             # 'password': 'something',
             'channel': '##Orz',
             # None or regex
-            'ignore': None,
+            'ignored_user': None,
+            'colored': False,
+            'long_reply': False,
             # read only
             'proxies': [
                 # protocol, relay bot nick regex, regex: (nick) (message)
                 # other messages sent by this user are considered service message
                 ('xmpp', '^OrzGTalk.*', r'\(GTalk\) (\w+): (.+)$'),
-                ('tox', '^OrzTox.*', r'[([^]]+)] (.+)$'),
-                ('irc2p', '^OrzI2P.*', r'[([^]]+)] (.+)$')
+                ('tox', '^OrzTox.*', r'\(([^)]+)\) (.+)$'),
+                ('irc2p', '^OrzI2P.*', r'\[([^]]+)\] (.+)$'),
             ]
         },
         'telegrambot': {

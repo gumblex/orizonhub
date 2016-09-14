@@ -27,7 +27,7 @@ def setsplimits(cputime, memory):
     def _setlimits():
         resource.setrlimit(resource.RLIMIT_CPU, cputime)
         resource.setrlimit(resource.RLIMIT_RSS, memory)
-        resource.setrlimit(resource.RLIMIT_NPROC, (1024, 1024))
+        resource.setrlimit(resource.RLIMIT_NPROC, (2048, 2048))
     return _setlimits
 
 # {"id": 1, "cmd": "bf", "args": [",[.,]", "asdasdf"]}
@@ -86,6 +86,7 @@ def cmd_py(expr):
         proc.kill()
         result, errs = proc.communicate()
     finally:
+        print(result, errs)
         if proc.poll() is None:
             proc.terminate()
     result = result.strip().decode('utf-8', errors='replace')

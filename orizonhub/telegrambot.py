@@ -7,7 +7,7 @@ import json
 import time
 import logging
 
-from .utils import timestring_a, smartname, fwd_to_text
+from .utils import timestring_a, smartname, fwd_to_text, sededit, LimitedSizeDict
 from .model import __version__, Protocol, Message, User, UserType, Response
 
 import requests
@@ -100,6 +100,7 @@ class TelegramBotProtocol(Protocol):
         # auto updated
         self.dest = User(None, 'telegram', UserType.group, self.cfg.groupid,
                          None, config.group_name, None, config.group_name)
+        self.msghistory = LimitedSizeDict(size_limit=10)
 
     def start_polling(self):
         self.identity = self._make_user(self.bot_api('getMe'))
@@ -120,7 +121,9 @@ class TelegramBotProtocol(Protocol):
                 for upd in updates:
                     maxupd = max(maxupd, upd['update_id'])
                     if 'message' in upd:
-                        self.bus.post(self._make_message(upd['message']))
+                        self.bus.post(self._make_message(upd['message'], True))
+                    elif 'edited_message' in upd:
+                        self.bus.post(self._make_message(upd['edited_message'], True))
                 self.bus.state['tgapi.offset'] = maxupd + 1
             time.sleep(.2)
 
@@ -282,8 +285,12 @@ class TelegramBotProtocol(Protocol):
         '''
         if not media:
             return ''
-        ftype, fval = tuple(media.items())[0]
-        if ftype == 'entities':
+        media_type = tuple((k,v) for k,v in media.items() if k not in ('entities', 'edit_date'))
+        if media_type:
+            ftype, fval = media_type[0]
+        else:
+            return ''
+        if ftype in ('entities'):
             return ''
         ret = '<%s>' % ftype
         if 'new_chat_title' in media:
@@ -308,7 +315,7 @@ class TelegramBotProtocol(Protocol):
                 logging.exception("can't paste a file: %s", media)
         return ret
 
-    def _make_message(self, obj):
+    def _make_message(self, obj, memorize=False):
         if obj is None:
             return None
         chat = self._make_user(obj['chat'])
@@ -321,10 +328,20 @@ class TelegramBotProtocol(Protocol):
         else:
             # other group or channel
             mtype = 'othergroup'
-        text = obj.get('text') or obj.get('caption', '')
+        text = text2 = obj.get('text') or obj.get('caption', '')
         alttext = self.servemedia(media)
-        if alttext and text:
-            alttext = text + ' ' + alttext
+        if 'edit_date' in media:
+            origtext = self.msghistory.get(obj['message_id'])
+            if origtext:
+                text2 = '<edit: %s>' % sededit(origtext, text)
+            else:
+                text2 = '<edit> ' + text
+        if text and memorize:
+            self.msghistory[obj['message_id']] = text
+        if alttext and text2:
+            alttext = text2 + ' ' + alttext
+        elif text2:
+            alttext = text2
         return Message(
             None, 'telegrambot', obj['message_id'],
             # from: Optional. Sender, can be empty for messages sent to channels
