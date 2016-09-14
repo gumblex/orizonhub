@@ -69,6 +69,7 @@ target/
 # bot data
 config.py
 *.db
+*.db-*
 chatlog.txt
 orzimg/
 orizonhub/command/ext/data/

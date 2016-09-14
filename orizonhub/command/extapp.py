@@ -86,7 +86,7 @@ def cmd_py(expr):
         proc.kill()
         result, errs = proc.communicate()
     finally:
-        print(result, errs)
+        #print(result, errs)
         if proc.poll() is None:
             proc.terminate()
     result = result.strip().decode('utf-8', errors='replace')
