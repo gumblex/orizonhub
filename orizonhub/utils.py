@@ -110,7 +110,7 @@ def smartname(user, limit=20):
         else:
             un = un[:limit]
     else:
-        return un.rstrip(' -|[]')
+        return un.rstrip(' -|[')
 
 def fwd_to_text(messages, timezone, withid=False, withuser=True):
     lines = []

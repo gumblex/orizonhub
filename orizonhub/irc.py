@@ -100,7 +100,7 @@ class IRCProtocol(Protocol):
         if self.cfg.get('password'):
             self.ircconn.setpass(self.cfg.password)
         self.ircconn.setnick(self.cfg.username)
-        self.ircconn.setuser(self.cfg.username, self.cfg.username)
+        self.ircconn.setuser(self.cfg.get('ident'), self.cfg.get('realname'))
         self.ircconn.join(self.cfg.channel)
         logger.info('IRC connected.')
 
@@ -222,8 +222,16 @@ class IRCProtocol(Protocol):
                 self.bus.telegrambot.identity.pid == msg.reply.src.pid
                 or 'telegramcli' in self.bus and
                 self.bus.telegramcli.identity.pid == msg.reply.src.pid
+            ) or msg.fwd_src and msg.fwd_src.protocol == 'telegram' and (
+                'telegrambot' in self.bus and
+                self.bus.telegrambot.identity.pid == msg.fwd_src.pid
+                or 'telegramcli' in self.bus and
+                self.bus.telegramcli.identity.pid == msg.fwd_src.pid
             ):
-                rnmatch = re_ircforward.match(msg.reply.text)
+                if msg.reply:
+                    rnmatch = re_ircforward.match(msg.reply.text)
+                else:
+                    rnmatch = re_ircforward.match(msg.text)
                 if rnmatch:
                     src = rnmatch.group(1) or src
                     replytext = rnmatch.group(2) or replytext

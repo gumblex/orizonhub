@@ -10,7 +10,7 @@ import collections
 from ..utils import smartname
 from .support import cp, Message, Response
 
-re_search_number = re.compile(r'([0-9]+)(,[0-9]+)?')
+re_search_number = re.compile(r'^([0-9]+)(,[0-9]+)?$')
 
 formattime = lambda timestamp: datetime.datetime.fromtimestamp(
     timestamp, cp.bus.timezone).strftime('%Y-%m-%d %H:%M')
