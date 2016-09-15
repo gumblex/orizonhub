@@ -39,7 +39,7 @@ def cmd_getmsg(expr, msg=None):
         if not expr:
             # raise for reply processing
             raise ValueError
-        mids = tuple(map(int, expr.split()))
+        mids = tuple(map(int, expr.strip().split()))
     except Exception:
         # FIXME: msg.reply won't have a id
         if msg.reply and msg.reply.id:
@@ -86,7 +86,7 @@ def cmd_search(expr, msg=None):
     '''/search|/s [@username] [keyword] [number=5|number,offset] Search the group log for recent messages. max(number)=20'''
     username, uid, limit, offset = None, None, 5, 0
     if expr:
-        expr = expr.split(' ')
+        expr = expr.strip().split(' ')
         if len(expr) > 1:
             ma = re_search_number.match(expr[-1])
             if ma:
@@ -166,7 +166,7 @@ def cmd_uinfo(expr, msg=None):
     else:
         user = None
     if expr:
-        expr = expr.split(' ')
+        expr = expr.strip().split(' ')
         username = expr[0]
         if not username.startswith('@'):
             user = user or msg.src
@@ -247,7 +247,9 @@ def db_getuidbyname(username):
             return uid[0]
 
 def forward_tgbot(origmsg: Message, fwd: Message) -> Response:
-    if origmsg.protocol == 'telegrambot' and fwd.protocol.startswith('telegram'):
+    if (origmsg.protocol == 'telegrambot' and fwd.protocol.startswith('telegram')
+        and (fwd.protocol == 'telegrambot' or
+        cp.bus.telegrambot.dest.pid == fwd.chat.pid)):
         try:
             m = cp.bus.telegrambot.bot_api('forwardMessage', chat_id=origmsg.chat.pid,
                 from_chat_id=fwd.chat.pid, message_id=fwd.pid)

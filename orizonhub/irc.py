@@ -320,8 +320,7 @@ class IRCProtocol(Protocol):
     def identify_mention(self, text):
         match = re_mention.match(text)
         if match:
-            mention, text = match.groups()
-            nick = self.nickcache.get(mention)
+            nick = self.nickcache.get(match.group(1))
             if nick:
                 return match.expand(r'@%s\2' % nick)
         return text
