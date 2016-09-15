@@ -7,7 +7,7 @@ import queue
 import logging
 from zlib import crc32
 
-from .utils import smartname
+from .utils import smartname, LRUCache
 from .model import Protocol, Message, User, UserType, Response
 from .ext.libirc import IRCConnection
 
@@ -16,6 +16,7 @@ logger = logging.getLogger('irc')
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 re_ircforward = re.compile(r'^\[(.+?)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
+re_mention = re.compile(r'^(.+?)([:,].+$|$)')
 
 md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
 
@@ -88,6 +89,7 @@ class IRCProtocol(Protocol):
         #self.line_length -= len(self.cfg.channel)
         # for max compatibility
         self.line_length = 420
+        self.nickcache = LRUCache(32)
 
     def checkircconn(self):
         if self.ircconn and self.ircconn.sock:
@@ -150,7 +152,7 @@ class IRCProtocol(Protocol):
                             src = self._make_user(mt.group(1), p)
                             text = mt.group(2)
                         break
-                alttext = re_ircfmt.sub('', text)
+                alttext = self.identify_mention(re_ircfmt.sub('', text))
                 self.bus.post(Message(
                     None, protocol, None, src, dest, text, media, mtime,
                     None, None, None, mtype, None if alttext == text else alttext
@@ -183,9 +185,9 @@ class IRCProtocol(Protocol):
         if response.reply.mtype == 'private':
             prefix = ''
         elif self.cfg.get('colored'):
-            prefix = '\x0315%s\x03: ' % smartname(response.reply.src)
+            prefix = '\x0315%s\x03: ' % self.smartname(response.reply.src)
         else:
-            prefix = smartname(response.reply.src) + ': '
+            prefix = self.smartname(response.reply.src) + ': '
         lines = self.longtext(text, prefix, command=True)
         self.say(lines[0], response.reply.chat, (0, time.time(), 1))
         return Message(
@@ -201,18 +203,18 @@ class IRCProtocol(Protocol):
         if self.cfg.get('colored'):
             prefix = '[%s] ' % self.colored_smartname(msg.src)
         else:
-            prefix = '[%s] ' % smartname(msg.src)
+            prefix = '[%s] ' % self.smartname(msg.src)
         text = msg.alttext or (tgentity_conv(msg)
                 if msg.media and 'entities' in msg.media else msg.text)
         alttext = msg.alttext or (tgentity_conv(msg, 'markdown')
                 if msg.media and 'entities' in msg.media else msg.text)
         if msg.fwd_src or msg.reply:
             if msg.fwd_src:
-                src = smartname(msg.fwd_src)
+                src = self.smartname(msg.fwd_src)
                 prefix2 = 'Fwd '
                 replytext = None
             else:
-                src = smartname(msg.reply.src)
+                src = self.smartname(msg.reply.src)
                 prefix2 = ''
                 replytext = msg.reply.text
             if msg.reply and msg.reply.src.protocol == 'telegram' and (
@@ -308,7 +310,21 @@ class IRCProtocol(Protocol):
     def colored_smartname(user, limit=20):
         palette = (2, 3, 4, 5, 6, 7, 10, 12, 13)
         color = (user.pid or crc32(user.username.encode('utf-8')) or user.id or 0) % len(palette)
-        return '\x03%02d%s\x03' % (palette[color], smartname(user, limit))
+        return '\x03%02d%s\x03' % (palette[color], self.smartname(user, limit))
+
+    def smartname(self, user, limit=20):
+        name = smartname(user, limit)
+        if user.username:
+            self.nickcache[name] = user.username
+
+    def identify_mention(self, text):
+        match = re_mention.match(text)
+        if match:
+            mention, text = match.groups(s)
+            nick = self.nickcache.get(mention)
+            if nick:
+                return match.expand(r'@%s\2' % nick)
+        return text
 
     def close(self):
         if self.run:

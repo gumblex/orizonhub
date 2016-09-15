@@ -44,31 +44,31 @@ def wrap_attrdict(obj):
     else:
         return obj
 
-class LRUCache:
+class LRUCache(collections.UserDict):
     def __init__(self, maxlen):
         self.capacity = maxlen
-        self.cache = collections.OrderedDict()
+        self.data = collections.OrderedDict()
 
     def __getitem__(self, key):
-        value = self.cache.pop(key)
-        self.cache[key] = value
+        value = self.data.pop(key)
+        self.data[key] = value
         return value
 
     def get(self, key, default=None):
         try:
-            value = self.cache.pop(key)
-            self.cache[key] = value
+            value = self.data.pop(key)
+            self.data[key] = value
             return value
         except KeyError:
             return default
 
     def __setitem__(self, key, value):
         try:
-            self.cache.pop(key)
+            self.data.pop(key)
         except KeyError:
-            if len(self.cache) >= self.capacity:
-                self.cache.popitem(last=False)
-        self.cache[key] = value
+            if len(self.data) >= self.capacity:
+                self.data.popitem(last=False)
+        self.data[key] = value
 
 class LimitedSizeDict(collections.OrderedDict):
     def __init__(self, *args, **kwds):
