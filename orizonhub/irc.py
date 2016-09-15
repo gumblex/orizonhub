@@ -306,8 +306,7 @@ class IRCProtocol(Protocol):
         return User(None, protocol, UserType.user, None,
                     nick, realname, None, nick.rstrip('_`'))
 
-    @staticmethod
-    def colored_smartname(user, limit=20):
+    def colored_smartname(self, user, limit=20):
         palette = (2, 3, 4, 5, 6, 7, 10, 12, 13)
         color = (user.pid or crc32(user.username.encode('utf-8')) or user.id or 0) % len(palette)
         return '\x03%02d%s\x03' % (palette[color], self.smartname(user, limit))
@@ -320,7 +319,7 @@ class IRCProtocol(Protocol):
     def identify_mention(self, text):
         match = re_mention.match(text)
         if match:
-            mention, text = match.groups(s)
+            mention, text = match.groups()
             nick = self.nickcache.get(mention)
             if nick:
                 return match.expand(r'@%s\2' % nick)
