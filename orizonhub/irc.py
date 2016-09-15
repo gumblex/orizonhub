@@ -185,7 +185,7 @@ class IRCProtocol(Protocol):
         if response.reply.mtype == 'private':
             prefix = ''
         elif self.cfg.get('colored'):
-            prefix = '\x0315%s\x03: ' % self.smartname(response.reply.src)
+            prefix = '\x0315%s\x0F: ' % self.smartname(response.reply.src)
         else:
             prefix = self.smartname(response.reply.src) + ': '
         lines = self.longtext(text, prefix, command=True)
@@ -243,7 +243,7 @@ class IRCProtocol(Protocol):
             else:
                 prefix2 += src + ': '
             if self.cfg.get('colored'):
-                prefix2 = '\x0315%s\x03' % prefix2
+                prefix2 = '\x0315%s\x0F' % prefix2
         else:
             prefix2 = ''
         lines = self.longtext(text, prefix, prefix2, alttext,

@@ -191,12 +191,11 @@ class TelegramBotProtocol(Protocol):
             text = '[%s] Fwd %s: %s' % (smartname(msg.src), smartname(msg.fwd_src), msg.text)
         elif msg.reply:
             text = '[%s] %s: %s' % (smartname(msg.src), smartname(msg.reply.src), msg.text)
-        else:
-            text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)
-        if re_ircfmt.search(text):
-            text = ircfmt2tgmd(text)
+        elif re_ircfmt.search(msg.text):
+            text = '[%s] %s' % (smartname(msg.src), ircfmt2tgmd(msg.text))
             parse_mode = 'Markdown'
         else:
+            text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)
             parse_mode = None
         m = self.bot_api('sendMessage', chat_id=self.dest.pid, text=text,
             parse_mode=parse_mode)
