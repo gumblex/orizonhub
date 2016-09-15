@@ -84,7 +84,7 @@ def cmd_do(expr, msg=None):
             return
         except KeyError:
             pass
-        if len(expr) < 5:
+        if len(expr) <= 10:
             res = ', '.join(unicodedata.name(ch) for ch in expr)
             return res
         else:

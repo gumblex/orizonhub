@@ -128,14 +128,27 @@ def fwd_to_text(messages, timezone, withid=False, withuser=True):
     else:
         return 'Message%s not found.' % ('s' if len(messages) > 1 else '')
 
-def sededit(a, b):
-    start1, end1, start2, end2 = None, None, None, None
+def sededit(a, b, context=0):
+    '''
+    Take two strings and output a sed-like diff
+    '''
+    if a == b:
+        return ''
+    a_len = len(a)
+    b_len = len(b)
+    start1, end1, start2, end2 = a_len, 0, b_len, 0
     s = difflib.SequenceMatcher(None, a, b)
     for tag, i1, i2, j1, j2 in s.get_opcodes():
         if tag == 'equal':
             continue
-        if start1:
-            end1, end2 = i2, j2
+        elif tag == 'insert':
+            ins = 1
         else:
-            start1, start2 = i1, j1
-    return 's/%s/%s/' % (a[start1:end1], b[start2:end2])
+            ins = 0
+        start1 = max(min(i1-context-ins, start1), 0)
+        start2 = max(min(j1-context-ins, start2), 0)
+        end1 = min(max(i2+context+ins, end1), a_len)
+        end2 = min(max(j2+context+ins, end2), b_len)
+    return 's/%s%s%s/%s/' % (
+            ('' if start1 else '^'), a[start1:end1],
+            ('$' if end1 == a_len else ''), b[start2:end2])
