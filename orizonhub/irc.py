@@ -228,7 +228,7 @@ class IRCProtocol(Protocol):
                     src = rnmatch.group(1) or src
                     replytext = rnmatch.group(2) or replytext
             if replytext and self.cfg.get('long_reply'):
-                replytext = replytext.sub('\n', '').strip()
+                replytext = replytext.replace('\n', '').strip()
                 if len(replytext) > 8:
                     replytext = replytext[:8] + '…'
                 prefix2 = 'Re %s:「%s」' % (src, replytext)
