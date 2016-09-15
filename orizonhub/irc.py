@@ -315,6 +315,7 @@ class IRCProtocol(Protocol):
         name = smartname(user, limit)
         if user.username:
             self.nickcache[name] = user.username
+        return name
 
     def identify_mention(self, text):
         match = re_mention.match(text)
