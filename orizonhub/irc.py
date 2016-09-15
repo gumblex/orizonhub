@@ -13,7 +13,7 @@ from .ext.libirc import IRCConnection
 
 logger = logging.getLogger('irc')
 
-re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?')
+re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F\x06]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 re_ircforward = re.compile(r'^\[(.+?)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
 re_mention = re.compile(r'^(.+?)([:,].+$|$)')

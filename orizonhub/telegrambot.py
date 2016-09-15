@@ -14,7 +14,7 @@ import requests
 
 logger = logging.getLogger('tgbot')
 
-re_ircfmt = re.compile('([\x02\x1D\x1F\x16\x0F]|\x03(?:\d+(?:,\d+)?)?)')
+re_ircfmt = re.compile('([\x02\x1D\x1F\x16\x0F\x06]|\x03(?:\d+(?:,\d+)?)?)')
 re_mdescape = re.compile(r'([\[\*_])')
 mdescape = lambda s: re_mdescape.sub(r'\\\1', s)
 
@@ -53,6 +53,9 @@ def ircfmt2tgmd(s):
             state = [False]*5
             ret.append(code)
             code = ''
+        elif chunk[0] == '\x06':
+            # blink
+            pass
         else:
             ret.append(mdescape(chunk))
     if code:
@@ -192,7 +195,12 @@ class TelegramBotProtocol(Protocol):
         elif msg.reply:
             text = '[%s] %s: %s' % (smartname(msg.src), smartname(msg.reply.src), msg.text)
         elif re_ircfmt.search(msg.text):
-            text = '[%s] %s' % (smartname(msg.src), ircfmt2tgmd(msg.text))
+            content = ircfmt2tgmd(msg.text)
+            try:
+                content = self.bus.irc.identify_mention(content)
+            except KeyError:
+                pass
+            text = '\\[%s] %s' % (smartname(msg.src), content)
             parse_mode = 'Markdown'
         else:
             text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)

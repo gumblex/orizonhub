@@ -10,6 +10,7 @@ import collections
 signames = {k: v for v, k in reversed(sorted(signal.__dict__.items()))
      if v.startswith('SIG') and not v.startswith('SIG_')}
 
+identity = lambda x: x
 re_ntnone = re.compile(r'\w+=None(, )?')
 re_usertype = re.compile(r'<(UserType.\w+): \d+>')
 nt_repr = lambda nt: re_usertype.sub('\\1', re_ntnone.sub('', str(nt)))
