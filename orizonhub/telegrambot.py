@@ -339,7 +339,7 @@ class TelegramBotProtocol(Protocol):
         alttext = self.servemedia(media)
         if 'edit_date' in media:
             origtext = self.msghistory.get(obj['message_id'])
-            if origtext:
+            if origtext and '\n' not in text:
                 text2 = '<edit: %s>' % sededit(origtext, text)
             else:
                 text2 = '<edit> ' + text

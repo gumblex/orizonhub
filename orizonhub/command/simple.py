@@ -71,6 +71,7 @@ def cmd_do(expr, msg=None):
         ('mac', ('您的计算机\n变得太热\n因为丢失了一些\n系统软件\n'
                  '您的计算机\n不能进入睡眠\n因此\n它将关闭'))
     ))
+    origexpr = expr
     expr = expr.lower()
     res = actions.get(expr)
     if res:
@@ -81,11 +82,10 @@ def cmd_do(expr, msg=None):
         try:
             res = unicodedata.lookup(expr)
             return res
-            return
         except KeyError:
             pass
         if len(expr) <= 10:
-            res = ', '.join(unicodedata.name(ch) for ch in expr)
+            res = ', '.join(unicodedata.name(ch) for ch in origexpr)
             return res
         else:
             return 'Something happened.'

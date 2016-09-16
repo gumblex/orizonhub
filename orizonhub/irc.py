@@ -189,7 +189,11 @@ class IRCProtocol(Protocol):
         else:
             prefix = self.smartname(response.reply.src) + ': '
         lines = self.longtext(text, prefix, command=True)
-        self.say(lines[0], response.reply.chat, (0, time.time(), 1))
+        if response.reply.mtype == 'group':
+            dest = self.cfg.channel
+        else:
+            dest = response.reply.chat.username
+        self.say(lines[0], dest, (0, time.time(), 1))
         return Message(
             None, 'irc', None, self.identity, response.reply.chat, text,
             None, int(time.time()), None, None, response.reply,
@@ -284,7 +288,7 @@ class IRCProtocol(Protocol):
             lines[k] = prefix + l
         return lines
 
-    def say(self, line, dest=None, priority=(0, 0, 1)):
+    def say(self, line: str, dest: str='', priority=(0, 0, 1)):
         # priority = (type, time, line)
         self.send_q.put((priority, (dest or self.cfg.channel, line)))
 
