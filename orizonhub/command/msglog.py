@@ -129,7 +129,7 @@ def cmd_mention(expr, msg=None):
             offset = ' OFFSET %d' % int(msg.strip())
         except ValueError:
             pass
-    user = msg.src
+    user = cp.bus.sqlite.update_user(msg.src)
     if user.username:
         res = cp.bus.sqlite.select("SELECT id, protocol, pid FROM messages WHERE (text LIKE ? OR reply_id IN (SELECT id FROM messages WHERE src = ?)) AND src != ? ORDER BY time DESC LIMIT 1" + offset, ('%@' + user.username + '%', user.id, cp.bus.telegrambot.identity.id)).fetchone()
         userat = '@' + user.username + ' '

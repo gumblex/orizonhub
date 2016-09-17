@@ -292,7 +292,7 @@ class TelegramBotProtocol(Protocol):
         '''
         if not media:
             return ''
-        media_type = tuple((k,v) for k,v in media.items() if k not in ('entities', 'edit_date'))
+        media_type = tuple((k,v) for k,v in media.items() if k not in ('forward_from_chat', 'entities', 'edit_date'))
         if media_type:
             ftype, fval = media_type[0]
         else:
@@ -310,6 +310,13 @@ class TelegramBotProtocol(Protocol):
             elif ftype == 'location':
                 ret += ' https://www.openstreetmap.org/?mlat=%s&mlon=%s' % (
                         fval['latitude'], fval['longitude'])
+            elif ftype == 'venue':
+                ret += ' %s, %s' % (fval['title'], fval['address'])
+                if fval.get('foursquare_id'):
+                    ret += ' http://foursquare.com/venue/' + fval['foursquare_id']
+                else:
+                    ret += ' https://www.openstreetmap.org/?mlat=%s&mlon=%s' % (
+                        fval['location']['latitude'], fval['location']['longitude'])
             elif ftype == 'sticker' and fval.get('emoji'):
                 ret = fval['emoji'] + ' ' + ret
             try:
