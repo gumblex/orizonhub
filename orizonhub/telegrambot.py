@@ -190,6 +190,7 @@ class TelegramBotProtocol(Protocol):
                 return self._make_message(m)
             except BotAPIFailed:
                 pass
+        parse_mode = None
         if msg.fwd_src:
             text = '[%s] Fwd %s: %s' % (smartname(msg.src), smartname(msg.fwd_src), msg.text)
         elif msg.reply:
@@ -204,7 +205,6 @@ class TelegramBotProtocol(Protocol):
             parse_mode = 'Markdown'
         else:
             text = '[%s] %s' % (smartname(msg.src), msg.alttext or msg.text)
-            parse_mode = None
         m = self.bot_api('sendMessage', chat_id=self.dest.pid, text=text,
             parse_mode=parse_mode)
         return self._make_message(m)
