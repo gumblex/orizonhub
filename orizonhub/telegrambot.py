@@ -277,14 +277,17 @@ class TelegramBotProtocol(Protocol):
         else:
             return None
         logging.debug('getFile: %r' % file_id)
-        fp = self.bot_api('getFile', file_id=file_id)
-        file_size = fp.get('file_size') or file_size or 0
-        file_path = fp.get('file_path')
-        if not file_path:
-            raise BotAPIFailed("can't get file_path for " + file_id)
-        file_ext = os.path.splitext(file_path)[1] or file_ext
-        cachename = file_id + file_ext
-        return (self.url_file + file_path, cachename, file_size)
+        if self.config.services.pastebin:
+            fp = self.bot_api('getFile', file_id=file_id)
+            file_size = fp.get('file_size') or file_size or 0
+            file_path = fp.get('file_path')
+            if not file_path:
+                raise BotAPIFailed("can't get file_path for " + file_id)
+            file_ext = os.path.splitext(file_path)[1] or file_ext
+            cachename = file_id + file_ext
+            return (self.url_file + file_path, cachename, file_size)
+        else:
+            return ('', '', 0)
 
     def servemedia(self, media):
         '''

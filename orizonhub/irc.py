@@ -107,7 +107,11 @@ class IRCProtocol(Protocol):
     def start_polling(self):
         last_sent = 0
         while self.run:
-            self.checkircconn()
+            try:
+                self.checkircconn()
+            except Exception:
+                logger.exception('Failed to connect to IRC.')
+                continue
             try:
                 line = self.ircconn.parse(block=False)
             except Exception:
