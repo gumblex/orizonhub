@@ -126,15 +126,15 @@ def cmd_mention(expr, msg=None):
     offset = ''
     if expr:
         try:
-            offset = ' OFFSET %d' % int(msg.strip())
+            offset = ' OFFSET %d' % max(int(expr.strip()) - 1, 0)
         except ValueError:
             pass
     user = cp.bus.sqlite.update_user(msg.src)
     if user.username:
-        res = cp.bus.sqlite.select("SELECT id, protocol, pid FROM messages WHERE (text LIKE ? OR reply_id IN (SELECT id FROM messages WHERE src = ?)) AND src != ? ORDER BY time DESC LIMIT 1" + offset, ('%@' + user.username + '%', user.id, cp.bus.telegrambot.identity.id)).fetchone()
+        res = cp.bus.sqlite.select("SELECT id, protocol, pid FROM messages WHERE (text LIKE ? OR reply_id IN (SELECT pid FROM messages WHERE src = ?)) AND src != ? AND src != ? ORDER BY time DESC LIMIT 1" + offset, ('%@' + user.username + '%', user.id, user.id, cp.bus.telegrambot.identity.id)).fetchone()
         userat = '@' + user.username + ' '
     else:
-        res = cp.bus.sqlite.select("SELECT id, protocol, pid FROM messages WHERE reply_id IN (SELECT id FROM messages WHERE src = ?) AND src != ? ORDER BY time DESC LIMIT 1" + offset, (user.id, cp.bus.telegrambot.identity.id)).fetchone()
+        res = cp.bus.sqlite.select("SELECT id, protocol, pid FROM messages WHERE reply_id IN (SELECT pid FROM messages WHERE src = ?) AND src != ? AND src != ? ORDER BY time DESC LIMIT 1" + offset, (user.id, user.id, cp.bus.telegrambot.identity.id)).fetchone()
         userat = ''
     if res:
         msgid, msgproto, msgpid = res
@@ -162,14 +162,14 @@ def timestring(minutes):
 def cmd_uinfo(expr, msg=None):
     '''/user [@username] [minutes=1440] Show information about <@username>.'''
     if msg.reply:
-        user = msg.reply.src
+        user = cp.bus.sqlite.update_user(msg.reply.src)
     else:
         user = None
     if expr:
         expr = expr.strip().split(' ')
         username = expr[0]
         if not username.startswith('@'):
-            user = user or msg.src
+            user = user or cp.bus.sqlite.update_user(msg.src)
             try:
                 minutes = min(max(int(expr[0]), 1), 3359733)
             except Exception:
@@ -184,7 +184,7 @@ def cmd_uinfo(expr, msg=None):
             except Exception:
                 minutes = 1440
     else:
-        user = user or msg.src
+        user = user or cp.bus.sqlite.update_user(msg.src)
         minutes = 1440
     uinfoln = []
     if user.username:
@@ -194,10 +194,10 @@ def cmd_uinfo(expr, msg=None):
         uinfoln.append('ID: %s' % user.pid)
     result = [', '.join(uinfoln)]
     if msg.mtype == 'group':
-        r = cp.bus.sqlite.select('SELECT src FROM messages WHERE date > ?', (time.time() - minutes * 60,)).fetchall()
+        r = cp.bus.sqlite.select('SELECT DISTINCT src, count(src) FROM messages WHERE time > ? GROUP BY src', (time.time() - minutes * 60,)).fetchall()
         timestr = timestring(minutes)
         if r:
-            ctr = collections.Counter(i[0] for i in r)
+            ctr = dict(r)
             if user.id in ctr:
                 rank = sorted(ctr, key=ctr.__getitem__, reverse=True).index(user.id) + 1
                 result.append('在最近%s内发了 %s 条消息，占 %.2f%%，位列第 %s。' % (timestr, ctr[user.id], ctr[user.id]/len(r)*100, rank))
@@ -215,13 +215,13 @@ def cmd_stat(expr, msg=None):
     except Exception:
         minutes = 1440
     # TODO: group by alias
-    r = cp.bus.sqlite.select('SELECT src FROM messages WHERE time > ?', (time.time() - minutes * 60,)).fetchall()
+    r = cp.bus.sqlite.select('SELECT DISTINCT src, count(src) FROM messages WHERE time > ? GROUP BY src', (time.time() - minutes * 60,)).fetchall()
     timestr = timestring(minutes)
     if not r:
         return '在最近%s内无消息。' % timestr
-    ctr = collections.Counter(i[0] for i in r)
+    ctr = collections.Counter(dict(r))
     mcomm = ctr.most_common(5)
-    count = len(r)
+    count = sum(r.values())
     msg = ['在最近%s内有 %s 条消息，平均每分钟 %.2f 条。' % (timestr, count, count/minutes)]
     msg.extend('%s: %s 条，%.2f%%' % (smartname(cp.bus.sqlite.getuser(k)), v, v/count*100) for k, v in mcomm)
     msg.append('其他用户 %s 条，人均 %.2f 条' % (count - sum(v for k, v in mcomm), count / len(ctr)))

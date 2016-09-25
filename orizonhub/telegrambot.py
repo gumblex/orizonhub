@@ -16,6 +16,7 @@ logger = logging.getLogger('tgbot')
 
 re_ircfmt = re.compile('([\x02\x1D\x1F\x16\x0F\x06]|\x03(?:\d+(?:,\d+)?)?)')
 re_mdescape = re.compile(r'([\[\*_])')
+re_http = re.compile(r'^(ht|f)tps?://')
 mdescape = lambda s: re_mdescape.sub(r'\\\1', s)
 
 def ircfmt2tgmd(s):
@@ -47,7 +48,11 @@ def ircfmt2tgmd(s):
                     newcode = table[1][k]
                     break
             if code != newcode:
-                ret.append(code + newcode)
+                if ret and ret[-1] == code:
+                    ret.pop()
+                else:
+                    ret.append(code)
+                ret.append(newcode)
                 code = newcode
         elif chunk[0] == '\x0F':
             state = [False]*5
@@ -56,6 +61,12 @@ def ircfmt2tgmd(s):
         elif chunk[0] == '\x06':
             # blink
             pass
+        elif code:
+            # Telegram don't support escape within a format code
+            if re_http.match(chunk):
+                ret.pop()
+                code = ''
+            ret.append(chunk)
         else:
             ret.append(mdescape(chunk))
     if code:
@@ -111,6 +122,8 @@ class TelegramBotProtocol(Protocol):
         # reload usernames
         self.bus.handler.usernames = set(p.username for p in
             self.bus.handler.config.protocols.values() if 'username' in p)
+        if 'sqlite' in self.bus.handler.loggers:
+            self.identity = self.bus.sqlite.update_user(self.identity)
         while self.run:
             logger.debug('tgapi.offset: %s', self.bus.state.get('tgapi.offset', 0))
             try:
@@ -300,8 +313,6 @@ class TelegramBotProtocol(Protocol):
             ftype, fval = media_type[0]
         else:
             return ''
-        if ftype in ('entities'):
-            return ''
         ret = '<%s>' % ftype
         if 'new_chat_title' in media:
             ret += ' ' + media['new_chat_title']
@@ -357,7 +368,7 @@ class TelegramBotProtocol(Protocol):
             self.msghistory[obj['message_id']] = text
         if alttext and text2:
             alttext = text2 + ' ' + alttext
-        elif text2:
+        elif text2 != text:
             alttext = text2
         return Message(
             None, 'telegrambot', obj['message_id'],
