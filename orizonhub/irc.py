@@ -7,7 +7,7 @@ import queue
 import logging
 from zlib import crc32
 
-from .utils import smartname, LRUCache
+from .utils import smartname, LRUCache, mdescape
 from .model import Protocol, Message, User, UserType, Response
 from .ext.libirc import IRCConnection
 
@@ -333,11 +333,13 @@ class IRCProtocol(Protocol):
             self.nickcache[name] = user.username
         return name
 
-    def identify_mention(self, text):
+    def identify_mention(self, text, escape=False):
         match = re_mention.match(text)
         if match:
             nick = self.nickcache.get(match.group(1))
             if nick:
+                if escape:
+                    nick = mdescape(nick)
                 return match.expand(r'@%s\2' % nick)
         return text
 

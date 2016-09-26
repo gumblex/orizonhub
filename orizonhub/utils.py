@@ -14,6 +14,8 @@ identity = lambda x: x
 re_ntnone = re.compile(r'\w+=None(, )?')
 re_usertype = re.compile(r'<(UserType.\w+): \d+>')
 nt_repr = lambda nt: re_usertype.sub('\\1', re_ntnone.sub('', str(nt)))
+re_mdescape = re.compile(r'([\[\*_])')
+mdescape = lambda s: re_mdescape.sub(r'\\\1', s)
 
 def uniq(seq, key=None): # Dave Kirby
     # Order preserving

@@ -7,17 +7,15 @@ import json
 import time
 import logging
 
-from .utils import timestring_a, smartname, fwd_to_text, sededit, LimitedSizeDict
 from .model import __version__, Protocol, Message, User, UserType, Response
+from .utils import mdescape, timestring_a, smartname, fwd_to_text, sededit, LimitedSizeDict
 
 import requests
 
 logger = logging.getLogger('tgbot')
 
 re_ircfmt = re.compile('([\x02\x1D\x1F\x16\x0F\x06]|\x03(?:\d+(?:,\d+)?)?)')
-re_mdescape = re.compile(r'([\[\*_])')
-re_http = re.compile(r'^(ht|f)tps?://')
-mdescape = lambda s: re_mdescape.sub(r'\\\1', s)
+re_http = re.compile(r'^\s*(ht|f)tps?://')
 
 def ircfmt2tgmd(s):
     '''
@@ -211,7 +209,7 @@ class TelegramBotProtocol(Protocol):
         elif re_ircfmt.search(msg.text):
             content = ircfmt2tgmd(msg.text)
             try:
-                content = self.bus.irc.identify_mention(content)
+                content = self.bus.irc.identify_mention(content, True)
             except KeyError:
                 pass
             text = '\\[%s] %s' % (smartname(msg.src), content)
