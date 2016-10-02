@@ -221,7 +221,7 @@ def cmd_stat(expr, msg=None):
         return '在最近%s内无消息。' % timestr
     ctr = collections.Counter(dict(r))
     mcomm = ctr.most_common(5)
-    count = sum(r.values())
+    count = sum(ctr.values())
     msg = ['在最近%s内有 %s 条消息，平均每分钟 %.2f 条。' % (timestr, count, count/minutes)]
     msg.extend('%s: %s 条，%.2f%%' % (smartname(cp.bus.sqlite.getuser(k)), v, v/count*100) for k, v in mcomm)
     msg.append('其他用户 %s 条，人均 %.2f 条' % (count - sum(v for k, v in mcomm), count / len(ctr)))
