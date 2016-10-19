@@ -16,7 +16,7 @@ logger = logging.getLogger('irc')
 re_ircfmt = re.compile('[\x02\x1D\x1F\x16\x0F\x06]|\x03(?:\d+(?:,\d+)?)?')
 re_ircaction = re.compile('^\x01ACTION (.*)\x01$')
 re_ircforward = re.compile(r'^\[(.+?)\] (.*)$|^\*\* ([^ ]+) (.*) \*\*$')
-re_mention = re.compile(r'^(.+?)([:,].+$|$)')
+re_mention = re.compile(r'^(.+?)(\s*[:,：，].+$|$)')
 
 md2ircfmt = lambda s: s.replace('*', '\x02').replace('_', '\x1D')
 

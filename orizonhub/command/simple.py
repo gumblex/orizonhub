@@ -116,7 +116,7 @@ def cmd_help(expr, msg=None):
     # TODO
     if expr:
         if expr in cp.commands:
-            h = cp.commands[expr].__doc__
+            h = cp.commands[expr].usage
             if h:
                 return h
             else:
