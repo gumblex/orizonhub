@@ -243,9 +243,9 @@ class IRCProtocol(Protocol):
                 if rnmatch:
                     src = rnmatch.group(1) or src
                     if msg.fwd_src:
-                        replytext = rnmatch.group(2) or replytext
-                    else:
                         text = rnmatch.group(2) or replytext
+                    else:
+                        replytext = rnmatch.group(2) or replytext
             if replytext and self.cfg.get('long_reply'):
                 replytext = replytext.replace('\n', '').strip()
                 if len(replytext) > 8:
