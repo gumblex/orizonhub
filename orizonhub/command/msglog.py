@@ -153,6 +153,19 @@ def cmd_mention(expr, msg=None):
     else:
         return 'No mention found.'
 
+@cp.register_command('history', mtype=('group',), dependency='sqlite')
+def cmd_history(expr, msg=None):
+    '''/history List the history of the selected message.'''
+    if msg.pid is None:
+        return 'Message history is not available.'
+    mids = [row[0] for row in cp.bus.sqlite.select("SELECT id FROM messages WHERE protocol=? AND pid=? ORDER BY time ASC", (msg.protocol, msg.pid))]
+    messages = list(filter(None, (cp.bus.sqlite.getmsg(mid) for mid in mids)))
+    text = []
+    for m in messages:
+        text.append('[%s] %s' % (formattime(m.time), m.text))
+    return Response('\n'.join(text) or 'Message history not found.',
+            {'type': 'forward', 'messages': messages}, msg, None)
+
 def timestring(minutes):
     h, m = divmod(minutes, 60)
     d, h = divmod(h, 24)
@@ -162,7 +175,10 @@ def timestring(minutes):
 def cmd_uinfo(expr, msg=None):
     '''/user [@username] [minutes=1440] Show information about <@username>.'''
     if msg.reply:
-        user = cp.bus.sqlite.update_user(msg.reply.src)
+        if msg.reply.fwd_src:
+            user = cp.bus.sqlite.update_user(msg.reply.fwd_src)
+        else:
+            user = cp.bus.sqlite.update_user(msg.reply.src)
     else:
         user = None
     if expr:
