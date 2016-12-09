@@ -156,9 +156,11 @@ def cmd_mention(expr, msg=None):
 @cp.register_command('history', mtype=('group',), dependency='sqlite')
 def cmd_history(expr, msg=None):
     '''/history List the history of the selected message.'''
-    if msg.pid is None:
+    if msg.reply is None:
+        return 'Please select a message and reply.'
+    elif msg.reply.pid is None:
         return 'Message history is not available.'
-    mids = [row[0] for row in cp.bus.sqlite.select("SELECT id FROM messages WHERE protocol=? AND pid=? ORDER BY time ASC", (msg.protocol, msg.pid))]
+    mids = [row[0] for row in cp.bus.sqlite.select("SELECT id FROM messages WHERE protocol=? AND pid=? ORDER BY time ASC", (msg.reply.protocol, msg.reply.pid))]
     messages = list(filter(None, (cp.bus.sqlite.getmsg(mid) for mid in mids)))
     text = []
     for m in messages:
