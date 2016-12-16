@@ -22,3 +22,12 @@ def cmd_py(expr, msg=None):
             return cp.external('py', expr).result()
     else:
         return 'Syntax error. Usage: ' + cmd_py.__doc__
+
+@cp.register_command('query', mtype=('private',), dependency='sqlite')
+def cmd_query(expr, msg=None):
+    # no public docs
+    __doc__ = '''/query [SQL] Execute SQL query.'''
+    if expr:
+        return cp.external('query', expr).result()
+    else:
+        return 'Syntax error. Usage: ' + __doc__

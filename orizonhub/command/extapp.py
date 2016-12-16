@@ -3,10 +3,13 @@
 
 import os
 import sys
+import imp
 import json
 import queue
+import sqlite3
 import tempfile
 import resource
+import itertools
 import threading
 import traceback
 import subprocess
@@ -21,7 +24,14 @@ from ext import simpleime
 from ext import mosesproxy
 from ext import chinesename
 
+root_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '../..'))
+main_config = imp.load_module('config', *imp.find_module(
+    'config', [root_path])).config
+
 resource.setrlimit(resource.RLIMIT_RSS, (131072, 262144))
+
+# Issue 28985
+SQLITE_FUNCTION = 31
 
 def setsplimits(cputime, memory):
     def _setlimits():
@@ -151,6 +161,26 @@ def cmd_reply(expr):
 def cmd_cont(expr):
     return getsayingbytext(expr, 'c') or 'ERROR_BRAIN_NOT_CONNECTED'
 
+def sql_auth(sqltype, arg1, arg2, dbname, source):
+    if sqltype in (sqlite3.SQLITE_READ, sqlite3.SQLITE_SELECT, SQLITE_FUNCTION):
+        return sqlite3.SQLITE_OK
+    else:
+        return sqlite3.SQLITE_DENY
+
+def cmd_query(expr):
+    try:
+        conn = sqlite3.connect(os.path.join(root_path, main_config['loggers']['sqlite']))
+        conn.set_authorizer(sql_auth)
+        cur = conn.cursor()
+        cur.execute(expr)
+        result = ('|'.join(desc[0] for desc in cur.description) + '\n' + '\n'.join(
+                  '|'.join('' if e is None else str(e) for e in r) for r in
+                  itertools.islice(cur, 0, 10)))
+        conn.close()
+        return result
+    except sqlite3.DatabaseError as ex:
+        return str(ex)
+
 COMMANDS = collections.OrderedDict((
 ('calc', cmd_calc),
 ('py', cmd_py),
@@ -162,7 +192,8 @@ COMMANDS = collections.OrderedDict((
 ('cut', cmd_cut),
 ('say', cmd_say),
 ('reply', cmd_reply),
-('cont', cmd_cont)
+('cont', cmd_cont),
+('query', cmd_query)
 ))
 
 MSG_Q = queue.Queue()
