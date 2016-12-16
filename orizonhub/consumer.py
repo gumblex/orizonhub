@@ -3,6 +3,7 @@
 
 import time
 import logging
+import threading
 import collections
 import concurrent.futures
 
@@ -21,7 +22,9 @@ class MessageHandler:
         self.protocols = protocols
         self.loggers = loggers
         self.providers = collections.ChainMap(self.protocols, self.loggers)
-        self.executor = concurrent.futures.ThreadPoolExecutor(10)
+        self.state = {}
+        self.commit_task = None
+        self.executor = concurrent.futures.ThreadPoolExecutor(5)
         self.timezone = pytz.timezone(config.timezone)
         self.usernames = set(p.username for p in config.protocols.values()
                              if 'username' in p)
@@ -35,6 +38,7 @@ class MessageHandler:
         if isinstance(msg, Request):
             return tasks, self.dispatch(msg)
         else:
+            self.delayed_commit()
             if msg.mtype == 'group':
                 for n, l in self.loggers.items():
                     tasks[n] = self.submit_task(l.log, msg)
@@ -164,5 +168,20 @@ class MessageHandler:
                 logger.exception('Async function failed.')
         return self.executor.submit(func_noerr, *args, **kwargs)
 
+    def delayed_commit(self, delay=60):
+        if self.commit_task:
+            self.commit_task.cancel()
+        self.commit_task = threading.Timer(delay, self.commit)
+        self.commit_task.start()
+
+    def commit(self):
+        for l in self.loggers.values():
+            l.commit()
+        self.state.commit()
+
     def close(self):
+        if self.commit_task:
+            self.commit_task.cancel()
+        if self.state:
+            self.state.close()
         self.executor.shutdown()

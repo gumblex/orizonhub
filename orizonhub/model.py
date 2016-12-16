@@ -4,7 +4,7 @@
 import enum
 import collections
 
-__version__ = '2.0'
+__version__ = '2.1'
 
 Message = collections.namedtuple('Message', (
     'id',       # Message id as in database: int or None (unknown)

@@ -123,9 +123,11 @@ class TelegramBotProtocol(Protocol):
         if 'sqlite' in self.bus.handler.loggers:
             self.identity = self.bus.sqlite.update_user(self.identity)
         while self.run:
-            logger.debug('tgapi.offset: %s', self.bus.state.get('tgapi.offset', 0))
+            logger.debug('tgapi.offset: %s',
+                self.bus.handler.state.get('tgapi.offset', 0))
             try:
-                updates = self.bot_api('getUpdates', offset=self.bus.state.get('tgapi.offset', 0), timeout=10)
+                updates = self.bot_api('getUpdates',
+                    offset=self.bus.handler.state.get('tgapi.offset', 0), timeout=10)
             except Exception:
                 logging.exception('TelegramBot: Get updates failed.')
                 continue
@@ -138,7 +140,7 @@ class TelegramBotProtocol(Protocol):
                         self.bus.post(self._make_message(upd['message'], True))
                     elif 'edited_message' in upd:
                         self.bus.post(self._make_message(upd['edited_message'], True))
-                self.bus.state['tgapi.offset'] = maxupd + 1
+                self.bus.handler.state['tgapi.offset'] = maxupd + 1
             time.sleep(.2)
 
     def send(self, response: Response, protocol: str, forwarded: Message) -> Message:
@@ -235,7 +237,8 @@ class TelegramBotProtocol(Protocol):
         while att <= self.attempts and self.run:
             try:
                 req = self.hsession.post(self.url + method, data=params,
-                                         files=input_file, timeout=45)
+                                         files=input_file,
+                                         timeout=(params.get('timeout', 0)+20))
                 retjson = req.content
                 ret = json.loads(retjson.decode('utf-8'))
                 break

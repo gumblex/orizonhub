@@ -33,6 +33,9 @@ class TextLogger(Logger):
         d['srcid'] = msg.src.id
         self.loghandler.emit(logging.makeLogRecord({'msg': self.FORMAT % d}))
 
+    def commit(self):
+        pass
+
 class SQLiteLogger(Logger):
     '''Logs messages with SQLite.'''
     SCHEMA = (
@@ -68,7 +71,7 @@ class SQLiteLogger(Logger):
         'CREATE INDEX IF NOT EXISTS idx_messages ON messages (protocol, pid)'
     )
 
-    def __init__(self, filename, tz=None, wal=True, autocommit=True):
+    def __init__(self, filename, tz=None, wal=True, autocommit=False):
         self.lock = threading.Lock()
         self.autocommit = autocommit
         self.msg_cache = LRUCache(50)
@@ -188,11 +191,12 @@ class SQLiteLogger(Logger):
         return cur.execute(req, arg)
 
     def commit(self):
-        try:
-            self.conn.commit()
-        except sqlite3.OperationalError:
-            # sqlite3.OperationalError: cannot commit - no transaction is active
-            pass
+        with self.lock:
+            try:
+                self.conn.commit()
+            except sqlite3.OperationalError:
+                # sqlite3.OperationalError: cannot commit - no transaction is active
+                pass
         logger.debug('db committed.')
 
     def close(self):

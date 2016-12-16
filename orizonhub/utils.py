@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import re
+import time
 import signal
 import difflib
 import datetime
+import functools
 import collections
 
 signames = {k: v for v, k in reversed(sorted(signal.__dict__.items()))
@@ -29,6 +31,24 @@ def nt_from_dict(nt, d, default=None):
     kwargs = dict.fromkeys(nt._fields, default)
     kwargs.update(d)
     return nt(**kwargs)
+
+def highres_sleep(secs):
+    preset = time.monotonic() + secs
+    while 1:
+        delta = preset - time.monotonic()
+        if delta <= 0:
+            return
+        elif delta >= 0.05:
+            time.sleep(delta/2)
+
+def delayed(secs, func=time.sleep):
+    def _decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwds):
+            func(secs)
+            return f(*args, **kwds)
+        return wrapper
+    return _decorator
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):

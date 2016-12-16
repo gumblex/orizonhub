@@ -38,10 +38,10 @@ class BotInstance:
             except KeyError:
                 raise ValueError('unrecognized logger: ' + k)
         if self.config.status == ':SQLite3:':
-            self.bus.state = provider.SQLiteStateStore(self.loggers['sqlite'].conn,
-                            self.loggers['sqlite'].lock)
+            self.bus.handler.state = provider.SQLiteStateStore(
+                self.loggers['sqlite'].conn, self.loggers['sqlite'].lock)
         else:
-            self.bus.state = provider.BasicStateStore(self.config.status)
+            self.bus.handler.state = provider.BasicStateStore(self.config.status)
         if self.config.get('maintenance') and self.config.maintenance.get('enabled'):
             from . import maintenance
             for task in self.config.maintenance.tasks:
@@ -87,7 +87,6 @@ class MessageBus:
     def __init__(self, handler):
         self.handler = handler
         self.pastebin = provider.DummyPasteBin()
-        self.state = {}
         self.timezone = None
 
     def post(self, msg):
@@ -101,8 +100,6 @@ class MessageBus:
 
     def close(self):
         self.handler.close()
-        if self.state:
-            self.state.close()
         self.pastebin.close()
 
     def __getattr__(self, name):
