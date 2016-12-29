@@ -14,7 +14,7 @@ See and modify `config.py` for how to run this bot.
 
 ## How to run
 
-`python3 orizond.py` 
+`python3 orizond.py`
 
 ## Features
 
