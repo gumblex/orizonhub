@@ -7,7 +7,7 @@ This is the version 2 of [tg-chatdig](https://github.com/gumblex/tg-chatdig).
 
 ## How to run
 
-`python3 orizond.py` 
+`python3 orizond.py`
 
 ## Features
 
