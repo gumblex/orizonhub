@@ -5,7 +5,11 @@ This is the version 2 of [tg-chatdig](https://github.com/gumblex/tg-chatdig).
 ## To Users
 **For general usage, please checkout the `simple` branch**, as an successor of [tg-irc-relay](https://github.com/gumblex/tg-irc-relay).
 
-### Features
+## How to run
+
+`python3 orizond.py` 
+
+## Features
 
 * Connect between IRC and Telegram API (or tg-cli, though not recommend)
 * Advanced anti-flooding algorithm
