@@ -12,6 +12,17 @@ See and modify `config.py` for how to run this bot.
 * Pastebin support included
 * Message logging
 
+## How to run
+
+`python3 orizond.py` 
+
+## Features
+
+* Connect between IRC and Telegram API (or tg-cli, though not recommend)
+* Advanced anti-flooding algorithm
+* Pastebin support included
+* Message logging
+
 ## License
 Most files are under the MIT License, except the ones in `orizonhub/ext/`:
 
