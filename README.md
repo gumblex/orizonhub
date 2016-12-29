@@ -5,13 +5,6 @@ This is the version 2 of [tg-chatdig](https://github.com/gumblex/tg-chatdig).
 ## The Simple Branch
 See and modify `config.py` for how to run this bot.
 
-### Features
-
-* Connect between IRC and Telegram API (or tg-cli, though not recommend)
-* Advanced anti-flooding algorithm
-* Pastebin support included
-* Message logging
-
 ## How to run
 
 `python3 orizond.py`
