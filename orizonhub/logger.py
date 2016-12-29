@@ -207,7 +207,9 @@ class BasicStateStore(collections.UserDict):
     def __init__(self, filename):
         if os.path.isfile(filename):
             data = json.load(open(self.filename, 'r', encoding='utf-8'))
-            super().__init__(data)
+        else:
+            data = {}
+        super().__init__(data)
         self.filename = filename
 
     def commit(self):
