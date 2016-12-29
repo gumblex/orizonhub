@@ -5,8 +5,8 @@ from ..model import User
 from ..utils import nt_from_dict
 from .support import cp, logger
 
-@cp.register_command('autoclose')
-def cmd_autoclose(expr, msg=None, mtype=('group',)):
+@cp.register_command('autoclose', mtype=('group',))
+def cmd_autoclose(expr, msg=None):
     if msg:
         if cp.config.command_config.get('autoclose'):
             cp.config.command_config['autoclose'] = False
