@@ -13,7 +13,5 @@ close = support.cp.close
 from . import simple
 from . import msglog
 from . import control
-from . import nlp
 from . import ghandler
-from . import unsafe
 

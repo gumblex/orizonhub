@@ -3,7 +3,6 @@
 
 from . import command
 from .irc import IRCProtocol
-from .rawsocket import RawSocketProtocol
 from .telegrambot import TelegramBotProtocol
 from .telegramcli import TelegramCliProtocol
 from .pastebin import DummyPasteBin, SimplePasteBin, Elimage
@@ -16,7 +15,6 @@ loggers = {
 }
 
 protocols = {
-'socket': RawSocketProtocol,
 'irc': IRCProtocol,
 'telegrambot': TelegramBotProtocol,
 'telegramcli': TelegramCliProtocol

@@ -5,20 +5,18 @@ config = {
     'debug': True,
     # status file
     # filename or ':SQLite3:'
-    'status': ':SQLite3:',
+    'status': 'status.json',
     'bot_fullname': 'Mr. Some Bot',
     # should be \w+
     'bot_nickname': 'SomeBot',
     'group_name': '##Orz',
     'timezone': 'Asia/Shanghai',
-    'secretkey': 'SECRET_KEY',
     'command_config': {
-        'autoclose': False,
-        'welcome': True
+        'welcome': False
     },
     'loggers': {
-        'sqlite': 'chatlogv2.db',
-        'textlog': 'chatlog.txt'
+        # 'sqlite': 'chatlogv2.db',
+        # 'textlog': 'chatlog.txt'
     },
     # for logging bot messages
     'main_protocol': 'telegrambot',
@@ -57,17 +55,8 @@ config = {
             'peername': 'channel#id1001023456',
             'bin': '../tg/bin/telegram-cli'
         },
-        'socket': {
-            'enabled': False,
-            'address': '/tmp/orizon_http.sock',
-            # read/write
-            'proxies': [
-                ('http', 'https://web.example.com/'),
-                ('skype', 'https://api.example.com/message/')
-            ]
-        }
     },
-    'forward': ['irc', 'telegrambot', 'http', 'skype'],
+    'forward': ['irc', 'telegrambot'],
     'services': {
         'cachepath': 'server/img',
         # can be None, 'self', 'vim-cn'

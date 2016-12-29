@@ -42,17 +42,6 @@ class BotInstance:
                 self.loggers['sqlite'].conn, self.loggers['sqlite'].lock)
         else:
             self.bus.handler.state = provider.BasicStateStore(self.config.status)
-        if self.config.get('maintenance') and self.config.maintenance.get('enabled'):
-            from . import maintenance
-            for task in self.config.maintenance.tasks:
-                task = task.copy()
-                name = task.pop('task')
-                logging.info('Maintenance task: ' + name)
-                getattr(maintenance, name)(config=self.config, **task)
-            logging.info('Maintenance done.')
-            if not self.config.maintenance.get('continue'):
-                logging.info("Satellite won't launch.")
-                return
         provider.command.activate(self.bus, self.config)
         for k, v in self.config.protocols.items():
             try:
