@@ -64,7 +64,7 @@ def ircfmt2tgmd(s):
             if re_http.match(chunk):
                 ret.pop()
                 code = ''
-            ret.append(chunk)
+            ret.append(mdescape(chunk))
         else:
             ret.append(mdescape(chunk))
     if code:
