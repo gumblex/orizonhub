@@ -206,7 +206,7 @@ class SQLiteLogger(Logger):
 class BasicStateStore(collections.UserDict):
     def __init__(self, filename):
         if os.path.isfile(filename):
-            data = json.load(open(self.filename, 'r', encoding='utf-8'))
+            data = json.load(open(filename, 'r', encoding='utf-8'))
         else:
             data = {}
         super().__init__(data)
