@@ -216,7 +216,7 @@ def cmd_uinfo(expr, msg=None):
         timestr = timestring(minutes)
         if r:
             ctr = dict(r)
-            countall = sum(r)
+            countall = sum(row[1] for row in r)
             if user.id in ctr:
                 rank = sorted(ctr, key=ctr.__getitem__, reverse=True).index(user.id) + 1
                 result.append('在最近%s内发了 %s 条消息，占 %.2f%%，位列第 %s。' % (timestr, ctr[user.id], ctr[user.id]/countall*100, rank))
