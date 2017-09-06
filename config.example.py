@@ -68,7 +68,10 @@ config = {
             # negative as in API response
             'groupid': -1001001023456,
             # bot's Telegram username, not important
-            'username': 'notorzdigbot'
+            'username': 'notorzdigbot',
+            # can ignore some users when relaying messages
+            # None or list of ids like [123, 456]
+            'ignored_user': None,
         },
         'telegramcli': {
             # optional 'enabled' field for all protocols, default True

@@ -33,7 +33,7 @@ class User(collections.namedtuple('User', (
         'type',       # Protocol-specified type: UserType
         # Telegram:      user, group (contains 'supergroup'), channel
         # IRC and other: user, group
-        'pid',        # Protocol-specified message id: int or None/0
+        'pid',        # Protocol-specified user id: int or None/0
         'username',   # Protocol-specified username: str or None/''
         'first_name', # Protocol-specified first name or full name: str or None
         'last_name',  # Protocol-specified last name: str or None
