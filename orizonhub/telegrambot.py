@@ -137,9 +137,17 @@ class TelegramBotProtocol(Protocol):
                 for upd in updates:
                     maxupd = max(maxupd, upd['update_id'])
                     if 'message' in upd:
-                        self.bus.post(self._make_message(upd['message'], True))
+                        msg = self._make_message(upd['message'], True)
                     elif 'edited_message' in upd:
-                        self.bus.post(self._make_message(upd['edited_message'], True))
+                        msg = self._make_message(upd['edited_message'], True)
+                    else:
+                        continue
+                    # ignore users in forwarding
+                    if (self.cfg.get('ignored_user') and
+                        msg.mtype == 'group' and
+                        msg.src.pid in self.cfg.ignored_user):
+                        continue
+                    self.bus.post(msg)
                 self.bus.handler.state['tgapi.offset'] = maxupd + 1
             time.sleep(.2)
 
