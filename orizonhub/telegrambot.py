@@ -132,7 +132,7 @@ class TelegramBotProtocol(Protocol):
                 logging.exception('TelegramBot: Get updates failed.')
                 continue
             if updates:
-                logging.debug('TelegramBot: messages coming.')
+                logging.debug('TelegramBot: %r.', updates)
                 maxupd = 0
                 for upd in updates:
                     maxupd = max(maxupd, upd['update_id'])
