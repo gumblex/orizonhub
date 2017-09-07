@@ -118,12 +118,14 @@ class IRCProtocol(Protocol):
                 logger.exception('Failed to poll from IRC.')
                 continue
             mtime = int(time.time())
-            #logger.debug('IRC: %s', line)
+            if line:
+                logger.debug('IRC: %s', line)
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
                 logger.info('I joined IRC channel: %s' % line['dest'])
-                self.ready = True
+                if line['dest'] == self.cfg.channel:
+                    self.ready = True
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
                 if self.cfg.ignored_user and re.match(self.cfg.ignored_user, line["nick"]):
