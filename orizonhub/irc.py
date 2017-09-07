@@ -126,6 +126,8 @@ class IRCProtocol(Protocol):
                 logger.info('I joined IRC channel: %s' % line['dest'])
                 if line['dest'] == self.cfg.channel:
                     self.ready = True
+                else:
+                    self.ircconn.join(self.cfg.channel)
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
                 if self.cfg.ignored_user and re.match(self.cfg.ignored_user, line["nick"]):
