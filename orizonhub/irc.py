@@ -123,11 +123,16 @@ class IRCProtocol(Protocol):
             if not line:
                 pass
             elif line["cmd"] == "JOIN" and line["nick"] == self.cfg.username:
-                logger.info('I joined IRC channel: %s' % line['dest'])
-                if line['dest'] == self.cfg.channel:
+                channelname = line['dest'] or line['msg']
+                logger.info('I joined IRC channel: %s' % channelname)
+                if channelname == self.cfg.channel:
                     self.ready = True
                 else:
+                    self.ircconn.part(channelname, 'not my channel')
                     self.ircconn.join(self.cfg.channel)
+            elif line["cmd"] == "PART" and line["nick"] == self.cfg.username:
+                channelname = line['dest'] or line['msg']
+                logger.info('I left IRC channel: %s' % channelname)
             elif line["cmd"] == "PRIVMSG":
                 # ignored users
                 if self.cfg.ignored_user and re.match(self.cfg.ignored_user, line["nick"]):
