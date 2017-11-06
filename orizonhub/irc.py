@@ -186,6 +186,7 @@ class IRCProtocol(Protocol):
                 except Exception:
                     self.send_q.put((prio, args))
                     logger.exception('Failed to send to IRC.')
+                    last_sent = time.perf_counter()
 
     def send(self, response: Response, protocol: str, forwarded: Message) -> Message:
         # sending to proxies is not supported
