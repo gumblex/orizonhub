@@ -130,6 +130,7 @@ class ExternalCommandProvider:
                     del self.task[obj['id']]
                 else:
                     logging.error('Task not found, result: %r' % obj)
+            time.sleep(0.2)
 
     def restart(self):
         self.proc.terminate()
