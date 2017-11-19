@@ -16,24 +16,22 @@ def cmd_nick(expr, msg=None):
     cp.bus.sqlite.update_user(nt_from_dict(User, user))
     return 'Set your nickname to ' + nick
 
-#@cp.register_command('t2i', mtype=('group',))
-#def cmd_t2i(expr, msg=None):
-    #global CFG
-    #if msg:
-        #if expr == 'off' or CFG.get('t2i'):
-            #CFG['t2i'] = False
-            #return 'Telegram to IRC forwarding disabled.'
-        #elif expr == 'on' or not CFG.get('t2i'):
-            #CFG['t2i'] = True
-            #return 'Telegram to IRC forwarding enabled.'
+@cp.register_command('t2i', protocol=('telegrambot', 'irc'), mtype=('group',))
+def cmd_t2i(expr, msg=None):
+    if msg:
+        if expr == 'off' or cp.bus.irc.forward_enabled:
+            cp.bus.irc.forward_enabled = False
+            return 'Forwarding to IRC disabled.'
+        elif expr == 'on' or not cp.bus.irc.forward_enabled:
+            cp.bus.irc.forward_enabled = True
+            return 'Forwarding to IRC enabled.'
 
-#@cp.register_command('i2t', mtype=('group',))
-#def cmd_i2t(expr, msg=None):
-    #global CFG
-    #if msg:
-        #if expr == 'off' or CFG.get('i2t'):
-            #CFG['i2t'] = False
-            #return 'IRC to Telegram forwarding disabled.'
-        #elif expr == 'on' or not CFG.get('i2t'):
-            #CFG['i2t'] = True
-            #return 'IRC to Telegram forwarding enabled.'
+@cp.register_command('i2t', protocol=('telegrambot', 'irc'), mtype=('group',))
+def cmd_i2t(expr, msg=None):
+    if msg:
+        if expr == 'off' or cp.bus.telegrambot.forward_enabled:
+            cp.bus.telegrambot.forward_enabled = False
+            return 'Forwarding to Telegram disabled.'
+        elif expr == 'on' or not cp.bus.telegrambot.forward_enabled:
+            cp.bus.telegrambot.forward_enabled = True
+            return 'Forwarding to Telegram enabled.'

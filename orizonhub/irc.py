@@ -68,6 +68,7 @@ class IRCProtocol(Protocol):
         self.bus = bus
         self.ircconn = None
         self.run = True
+        self.forward_enabled = True
         self.ready = False
         # self.rate: max interval
         self.rate = 1/2
@@ -216,7 +217,8 @@ class IRCProtocol(Protocol):
 
     def forward(self, msg: Message, protocol: str) -> Message:
         # `protocol` is ignored
-        if protocol != 'irc' or msg.protocol in self.proxies:
+        if (protocol != 'irc' or msg.protocol in self.proxies
+            or not self.forward_enabled):
             return
         if self.cfg.get('colored'):
             prefix = '[%s] ' % self.colored_smartname(msg.src)
