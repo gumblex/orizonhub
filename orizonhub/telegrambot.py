@@ -97,6 +97,7 @@ class TelegramBotProtocol(Protocol):
         self.useragent = 'OrizonHub/%s %s' % (__version__, self.hsession.headers["User-Agent"])
         self.hsession.headers["User-Agent"] = self.useragent
         self.run = True
+        self.forward_enabled = True
         # If you're sending bulk notifications to multiple users, the API will not
         # allow more than 30 messages per second or so. Consider spreading out
         # notifications over large intervals of 8—12 hours for best results.
@@ -204,6 +205,8 @@ class TelegramBotProtocol(Protocol):
         return self._make_message(m)
 
     def forward(self, msg: Message, protocol: str) -> Message:
+        if not self.forward_enabled:
+            return None
         if protocol.startswith('telegram'):
             try:
                 m = self.bot_api('forwardMessage', chat_id=self.dest.pid,
