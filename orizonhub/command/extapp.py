@@ -20,7 +20,6 @@ from ext import zhutil
 from ext import zhconv
 from ext import figchar
 from ext import simpcalc
-from ext import simpleime
 from ext import mosesproxy
 from ext import chinesename
 
@@ -111,9 +110,6 @@ def cmd_name(expr):
         res.append('名：' + ', '.join(names[:10]))
     return '\n'.join(res)
 
-def cmd_ime(expr):
-    return zhconv.convert(simpleime.pinyininput(expr.lower()), 'zh-hans')
-
 def cmd_fig(expr):
     r = fcgen.render(expr)
     rl = r.splitlines()
@@ -185,7 +181,6 @@ COMMANDS = collections.OrderedDict((
 ('calc', cmd_calc),
 ('py', cmd_py),
 ('name', cmd_name),
-('ime', cmd_ime),
 ('fig', cmd_fig),
 ('cc', cmd_cc),
 ('wyw', cmd_wyw),
@@ -218,7 +213,6 @@ saythr.start()
 
 calculator = simpcalc.Calculator('ans', True)
 namemodel = chinesename.NameModel('ext/data/namemodel.m')
-simpleime.loaddict('ext/data/pyindex.dawg', 'ext/data/essay.dawg')
 fcgen = figchar.BlockGenerator('ext/data/wqy.pkl', '🌝🌚')
 
 try:

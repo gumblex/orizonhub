@@ -17,19 +17,6 @@ def cmd_cc(expr, msg=None):
     tinput = (expr or tinput).strip()
     return cp.external('cc', tinput).result()
 
-@cp.register_command('ime')
-def cmd_ime(expr, msg=None):
-    '''/ime [pinyin] Simple Pinyin IME.'''
-    tinput = ''
-    if msg.reply:
-        tinput = msg.reply.text
-    tinput = (expr or tinput).strip()
-    if len(tinput) > 200:
-        tinput = tinput[:200] + '…'
-    if not tinput:
-        return 'Syntax error. Usage: ' + cmd_ime.__doc__
-    return cp.external('ime', tinput).result()
-
 @cp.register_command('cut')
 def cmd_cut(expr, msg=None):
     '''/cut [c|m] <something> Segment <something>.'''
